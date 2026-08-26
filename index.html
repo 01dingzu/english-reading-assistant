@@ -10,7 +10,10 @@
 <body>
 <header id="topbar">
   <h1 id="page-title">书架</h1>
-  <span id="dict-status" class="dict-status">词典加载中…</span>
+  <div class="topbar-right">
+    <span id="dict-status" class="dict-status">词典加载中…</span>
+    <button id="btn-guide" class="btn-guide" title="使用指引">?</button>
+  </div>
 </header>
 
 <main id="views">
@@ -87,6 +90,36 @@
 </div>
 
 <div id="toast" hidden></div>
+
+<div id="guide-overlay" hidden>
+  <div id="guide-backdrop"></div>
+  <div class="guide-card">
+    <h2>欢迎使用「读原文」</h2>
+    <p class="guide-sub">三步开始你的英文阅读</p>
+    <div class="guide-step">
+      <span class="guide-num">1</span>
+      <div>
+        <b>选一本书，直接开读</b>
+        <p>书架已为你预装 3 本内置书（童话 → 寓言 → 经典短篇，难度递增）。也可以导入自己的 TXT / EPUB。</p>
+      </div>
+    </div>
+    <div class="guide-step">
+      <span class="guide-num">2</span>
+      <div>
+        <b>阅读时，点任何单词</b>
+        <p>弹出释义、音标、发音，一键加入生词本——你读到它的那个句子会一起保存，复习时回到语境。</p>
+      </div>
+    </div>
+    <div class="guide-step">
+      <span class="guide-num">3</span>
+      <div>
+        <b>每天来「复习」打卡</b>
+        <p>系统按遗忘曲线安排语境填空和听音拼写，做几道题，生词慢慢变熟词。</p>
+      </div>
+    </div>
+    <button id="guide-close" class="btn btn-primary btn-big">开始阅读</button>
+  </div>
+</div>
 
 <script src="lib/jszip.min.js"></script>
 <script type="module" src="js/app.js"></script>

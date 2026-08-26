@@ -35,6 +35,14 @@ body {
   border-bottom: 0.5px solid var(--line);
 }
 #topbar h1 { font-size: 17px; font-weight: 500; }
+.topbar-right { display: flex; align-items: center; gap: 10px; }
+.btn-guide {
+  width: 26px; height: 26px; border-radius: 50%;
+  border: 0.5px solid var(--line); background: var(--surface);
+  color: var(--ink-2); font-size: 14px; font-weight: 600;
+  cursor: pointer; line-height: 1; font-family: var(--ui-font);
+}
+.btn-guide:active { background: var(--accent-soft); color: var(--accent); }
 .dict-status { font-size: 11px; color: var(--ink-3); }
 .dict-status.ok { color: var(--accent); }
 
@@ -216,6 +224,28 @@ body {
   padding: 8px 18px; border-radius: 20px; z-index: 50;
   max-width: 80vw; text-align: center;
 }
+
+/* ---------- guide overlay ---------- */
+#guide-overlay { position: fixed; inset: 0; z-index: 60; }
+#guide-backdrop { position: absolute; inset: 0; background: rgba(38,37,31,0.45); }
+.guide-card {
+  position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%);
+  width: min(88vw, 420px); max-height: 84vh; overflow-y: auto;
+  background: var(--surface); border-radius: 16px;
+  padding: 28px 24px 20px;
+  box-shadow: 0 12px 40px rgba(38,37,31,0.22);
+}
+.guide-card h2 { font-size: 19px; font-weight: 600; text-align: center; }
+.guide-sub { font-size: 13px; color: var(--ink-3); text-align: center; margin: 6px 0 20px; }
+.guide-step { display: flex; gap: 14px; margin-bottom: 18px; }
+.guide-num {
+  flex: none; width: 26px; height: 26px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 14px; font-weight: 600; margin-top: 2px;
+}
+.guide-step b { font-size: 15px; font-weight: 600; display: block; margin-bottom: 3px; }
+.guide-step p { font-size: 13px; color: var(--ink-2); line-height: 1.6; }
 
 /* ---------- tabbar ---------- */
 #tabbar {

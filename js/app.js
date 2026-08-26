@@ -5,7 +5,10 @@ import { books, words, kv } from './db.js';
 import { importFile, importRawText } from './importer.js';
 import { openBook, bindReaderUI, openSheet } from './reader.js';
 import * as review from './review.js';
-import { SAMPLE } from './sample.js';
+import { SAMPLES, SAMPLE } from './sample.js';
+
+// 复习答题状态（提交后禁止重复提交，下一题时重置）
+let answered = false;
 
 // ---------- vocab cache ----------
 export async function refreshVocabCache() {
@@ -13,8 +16,32 @@ export async function refreshVocabCache() {
   setVocabCache(new Set(all.map(r => r.word)));
 }
 
+// ---------- 全局错误兜底：任何脚本错误可见，不再无声无息 ----------
+window.addEventListener('error', (e) => {
+  toast('出错了：' + (e.message || '未知错误'), 3000);
+  console.error(e.error || e.message);
+});
+window.addEventListener('unhandledrejection', (e) => {
+  console.error('未处理的 Promise 异常', e.reason);
+});
+
 // ---------- 启动 ----------
 async function boot() {
+  // 1. 先绑 UI、启动路由——界面立刻可用，不等词典
+  try {
+    bindReaderUI();
+    bindShelfUI();
+    bindWordsUI();
+    bindReviewUI();
+    bindGuideUI();
+    window.addEventListener('hashchange', route);
+    route();
+  } catch (e) {
+    console.error(e);
+    toast('初始化失败：' + e.message, 4000);
+  }
+
+  // 2. 词典异步加载（3.7MB，手机上可能要几秒）
   const status = $('#dict-status');
   try {
     await loadDict(t => { status.textContent = t; status.classList.add('ok'); });
@@ -24,13 +51,47 @@ async function boot() {
     console.error(e);
     status.textContent = '词典加载失败';
   }
-  await refreshVocabCache();
-  bindReaderUI();
-  bindShelfUI();
-  bindWordsUI();
-  bindReviewUI();
-  window.addEventListener('hashchange', route);
-  route();
+
+  // 3. 生词缓存 + 预载内置书（难度估算依赖词典，故在词典之后）
+  try {
+    await refreshVocabCache();
+  } catch (e) { console.error(e); }
+
+  try {
+    const seeded = await kv.get('seeded');
+    if (!seeded) {
+      for (const s of SAMPLES) {
+        try { await importRawText(s); } catch (e) { console.error(e); }
+      }
+      await kv.set('seeded', 1);
+      renderShelf();  // 预载完成，刷新书架
+    }
+  } catch (e) { console.error(e); }
+
+  // 4. 首次访问显示指引
+  maybeShowGuide();
+}
+
+// ---------- 新手指引 ----------
+function bindGuideUI() {
+  $('#btn-guide').onclick = () => showGuide(false);
+  $('#guide-close').onclick = () => hideGuide();
+  $('#guide-backdrop').onclick = () => hideGuide();
+}
+
+function maybeShowGuide() {
+  kv.get('guideShown').then(shown => {
+    if (!shown) showGuide(true);
+  }).catch(() => {});
+}
+
+function showGuide(first) {
+  $('#guide-overlay').hidden = false;
+  if (first) kv.set('guideShown', 1).catch(() => {});
+}
+
+function hideGuide() {
+  $('#guide-overlay').hidden = true;
 }
 
 // ---------- 路由 ----------
@@ -46,7 +107,7 @@ function route() {
   if (page === 'read' && arg) {
     $('#view-reader').classList.add('active');
     $('#page-title').textContent = '阅读';
-    openBook(arg);
+    openBook(arg).catch(e => { console.error(e); toast('打开书籍失败'); });
   } else if (page === 'words') {
     $('#view-words').classList.add('active');
     $('#page-title').textContent = '生词本';
@@ -95,7 +156,7 @@ async function renderShelf() {
     grid.append(card);
   }
 
-  // 示例书入口
+  // 内置书被删光后提供恢复入口
   const hasSample = list.some(b => b.format === 'builtin');
   if (!hasSample) {
     grid.append(el('div', {
@@ -105,7 +166,7 @@ async function renderShelf() {
         const book = await importRawText(SAMPLE);
         if (book) { toast('示例书已导入'); location.hash = `#/read/${book.id}`; }
       },
-    }, el('span', { style: 'font-size:13px;color:var(--ink-2)' }, '＋ 载入示例书'), el('span', { style: 'font-size:11px;color:var(--ink-3)' }, '伊索寓言 · 6 篇')));
+    }, el('span', { style: 'font-size:13px;color:var(--ink-2)' }, '＋ 恢复示例书'), el('span', { style: 'font-size:11px;color:var(--ink-3)' }, '伊索寓言 · 6 篇')));
   }
 }
 
@@ -125,6 +186,11 @@ function bindShelfUI() {
 }
 
 // ---------- 生词本 ----------
+function bindWordsUI() {
+  // 生词本页当前无全局控件（删除按钮为行内绑定）；
+  // 保留函数确保 boot 绑定链完整，也方便未来在这里挂筛选/导出等控件
+}
+
 async function renderWords() {
   const all = await words.all();
   const stats = {
@@ -191,8 +257,10 @@ function bindReviewUI() {
     renderReviewHome();
   };
   document.querySelector('#review-card')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter' && !answered) submitAnswer();
-    else if (e.key === 'Enter' && answered) nextQuestion();
+    if (e.key !== 'Enter') return;
+    e.preventDefault();
+    if (!answered) submitAnswer();
+    else nextQuestion();
   });
 }
 
@@ -218,12 +286,13 @@ async function nextQuestion() {
     $('#rv-quit').click();
     return;
   }
+  answered = false;
   const info = review.sessionInfo();
   $('#rv-counter').textContent = `${info.done} / ${info.total}`;
   $('#rv-submit').hidden = false;
   $('#rv-next').hidden = true;
   card.querySelector('.rv-input')?.addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') submitAnswer();
+    if (e.key === 'Enter') { e.preventDefault(); if (!answered) submitAnswer(); }
   });
 }
 
