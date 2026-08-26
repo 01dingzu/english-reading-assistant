@@ -1,0 +1,8 @@
+# 原始词典数据（66MB，构建产物 dict.json 已包含所需数据）
+data/ecdict-full.csv
+
+# 临时文件
+*.tmp
+*.log
+.DS_Store
+Thumbs.db
