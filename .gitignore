@@ -6,3 +6,9 @@ data/ecdict-full.csv
 *.log
 .DS_Store
 Thumbs.db
+
+# 本地测试与依赖
+e2e-save.mjs
+node_modules/
+test.mjs
+static-check.mjs
