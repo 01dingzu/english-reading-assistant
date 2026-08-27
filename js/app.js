@@ -187,8 +187,88 @@ function bindShelfUI() {
 
 // ---------- 生词本 ----------
 function bindWordsUI() {
-  // 生词本页当前无全局控件（删除按钮为行内绑定）；
-  // 保留函数确保 boot 绑定链完整，也方便未来在这里挂筛选/导出等控件
+  // 备份：导出 / 导入（跨浏览器、跨设备搬运学习数据）
+  $('#btn-backup-export').onclick = exportBackup;
+  $('#btn-backup-import').onclick = () => $('#backup-file').click();
+  $('#backup-file').onchange = async (e) => {
+    const f = e.target.files[0];
+    e.target.value = '';
+    if (!f) return;
+    try {
+      const data = JSON.parse(await f.text());
+      const res = await importBackup(data);
+      toast(res);
+    } catch (err) {
+      console.error(err);
+      toast('导入失败：文件格式不对或已损坏');
+    }
+  };
+}
+
+// 导出：生词（含复习进度）+ 各书阅读进度 + 字号偏好
+async function exportBackup() {
+  try {
+    const [wordList, bookList] = await Promise.all([words.all(), books.all()]);
+    const fontSize = await kv.get('fontSize');
+    const data = {
+      app: 'engreader',
+      version: 1,
+      exportedAt: Date.now(),
+      words: wordList,
+      progress: bookList
+        .filter(b => b.progress && Object.keys(b.progress).length)
+        .map(b => ({ title: b.title, progress: b.progress })),
+      fontSize: fontSize || undefined,
+    };
+    const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
+    const a = document.createElement('a');
+    a.href = URL.createObjectURL(blob);
+    const d = new Date();
+    const pad = n => String(n).padStart(2, '0');
+    a.download = `engreader-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
+    a.click();
+    URL.revokeObjectURL(a.href);
+    toast(`已导出 ${wordList.length} 个生词`);
+  } catch (err) {
+    console.error(err);
+    toast('导出失败：' + err.message);
+  }
+}
+
+// 导入：生词合并（本地已有则保留本地），进度按书名匹配合并
+async function importBackup(data) {
+  if (!data || data.app !== 'engreader' || !Array.isArray(data.words)) {
+    throw new Error('not engreader backup');
+  }
+  let added = 0, skipped = 0;
+  for (const rec of data.words) {
+    if (!rec || typeof rec.word !== 'string') continue;
+    const exists = await words.get(rec.word);
+    if (exists) { skipped++; continue; }
+    await words.put({ word: rec.word, ph: rec.ph || '', tr: rec.tr || '', createdAt: rec.createdAt || Date.now(), srs: rec.srs || undefined });
+    added++;
+  }
+  // 阅读进度：按书名匹配
+  let progressCount = 0;
+  if (Array.isArray(data.progress)) {
+    const bookList = await books.all();
+    for (const p of data.progress) {
+      const b = bookList.find(x => x.title === p.title);
+      if (b && p.progress) {
+        b.progress = { ...(b.progress || {}), ...p.progress };
+        await books.put(b);
+        progressCount++;
+      }
+    }
+  }
+  // 字号偏好
+  if (typeof data.fontSize === 'number') {
+    await kv.set('fontSize', data.fontSize);
+  }
+  await refreshVocabCache();
+  renderWords();
+  renderReviewHome();
+  return `导入完成：新增 ${added} 词，跳过 ${skipped} 词${progressCount ? `，同步 ${progressCount} 本书进度` : ''}`;
 }
 
 async function renderWords() {

@@ -56,6 +56,12 @@
     <div class="words-summary" id="words-summary"></div>
     <div id="words-list" class="words-list"></div>
     <div id="words-empty" class="empty-hint"><p>生词本还是空的</p><p class="sub">阅读时点词加入，语境会一起保存</p></div>
+    <div class="words-toolbar">
+      <button id="btn-backup-export" class="btn btn-ghost">⬇ 导出备份</button>
+      <button id="btn-backup-import" class="btn btn-ghost">⬆ 导入备份</button>
+      <input type="file" id="backup-file" accept=".json,application/json" hidden>
+      <p class="backup-hint">换浏览器 / 换手机时：先在这里「导出备份」，再到新浏览器「导入备份」。生词、复习进度、阅读进度都会带走。</p>
+    </div>
   </section>
 
   <section id="view-review" class="view">
