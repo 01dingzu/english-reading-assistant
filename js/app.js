@@ -3,7 +3,7 @@ import { $, $$, el, toast, fmtDate } from './util.js';
 import { loadDict, setVocabCache } from './dict.js';
 import { books, words, kv } from './db.js';
 import { importFile, importRawText } from './importer.js';
-import { openBook, bindReaderUI, openSheet } from './reader.js';
+import { openBook, bindReaderUI, openSheet, speak } from './reader.js';
 import * as review from './review.js';
 import { SAMPLES, SAMPLE } from './sample.js';
 
@@ -220,6 +220,11 @@ async function renderWords() {
         el('div', { class: 'w-d' }, (r.tr || '').split('\n')[0]),
       ),
       el('span', { class: `w-s st-${st}` }, stLabel),
+      el('button', {
+        class: 'btn btn-ghost w-listen', title: '朗读',
+        'aria-label': `朗读 ${r.word}`,
+        onclick: (e) => { e.stopPropagation(); speak(r.word); },
+      }, '🔊'),
       el('button', {
         class: 'btn btn-ghost', style: 'font-size:12px',
         onclick: async () => {

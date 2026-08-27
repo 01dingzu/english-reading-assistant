@@ -181,6 +181,8 @@ body {
   white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
 }
 .word-row .w-s { font-size: 10px; padding: 2px 8px; border-radius: 8px; white-space: nowrap; }
+.word-row .w-listen { padding: 4px 8px; font-size: 14px; line-height: 1; flex-shrink: 0; }
+.word-row .w-listen:active { transform: scale(0.92); }
 .st-new { background: var(--danger-soft); color: var(--danger); }
 .st-learning { background: var(--warn-soft); color: var(--warn); }
 .st-mastered { background: var(--accent-soft); color: var(--accent); }
