@@ -46,10 +46,19 @@ export function morphFallback(word) {
   return w;
 }
 
+// 段落 → 句子列表（按句末标点切分，允许后跟引号/右括号）
+export function splitSentences(paragraphText) {
+  if (!paragraphText) return [];
+  return paragraphText
+    .split(/(?<=[.!?;]["'”’)\]]?)\s+/)
+    .map(s => s.trim())
+    .filter(Boolean);
+}
+
 // 从段落文本里提取包含目标词的句子
 export function findSentence(paragraphText, word) {
   if (!paragraphText) return '';
-  const parts = paragraphText.split(/(?<=[.!?;])\s+/);
+  const parts = splitSentences(paragraphText);
   const lower = word.toLowerCase();
   const hit = parts.find(s =>
     s.toLowerCase().includes(lower) ||

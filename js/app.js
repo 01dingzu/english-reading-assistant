@@ -1,7 +1,7 @@
 // app.js — 路由与页面主控
 import { $, $$, el, toast, fmtDate } from './util.js';
 import { loadDict, setVocabCache } from './dict.js';
-import { books, words, kv } from './db.js';
+import { books, words, kv, bookmarks } from './db.js';
 import { importFile, importRawText } from './importer.js';
 import { openBook, bindReaderUI, openSheet, speak } from './reader.js';
 import * as review from './review.js';
@@ -286,10 +286,10 @@ async function nextFlashCard() {
   $('#fc-counter').textContent = `${info.done} / ${info.total}`;
 }
 
-// 导出：生词（含复习进度）+ 各书阅读进度 + 字号偏好
+// 导出：生词（含复习进度）+ 各书阅读进度 + 书签 + 字号偏好
 async function exportBackup() {
   try {
-    const [wordList, bookList] = await Promise.all([words.all(), books.all()]);
+    const [wordList, bookList, bmList] = await Promise.all([words.all(), books.all(), bookmarks.all()]);
     const fontSize = await kv.get('fontSize');
     const data = {
       app: 'engreader',
@@ -299,6 +299,7 @@ async function exportBackup() {
       progress: bookList
         .filter(b => b.progress && Object.keys(b.progress).length)
         .map(b => ({ title: b.title, progress: b.progress })),
+      bookmarks: bmList.map(b => ({ bookTitle: b.bookTitle, chIdx: b.chIdx, paraIdx: b.paraIdx, text: b.text, createdAt: b.createdAt })),
       fontSize: fontSize || undefined,
     };
     const blob = new Blob([JSON.stringify(data)], { type: 'application/json' });
@@ -342,6 +343,27 @@ async function importBackup(data) {
       }
     }
   }
+  // 书签：按书名匹配本地书，重写 bookId 后去重写入
+  let bmCount = 0;
+  if (Array.isArray(data.bookmarks)) {
+    const bookList = await books.all();
+    for (const bm of data.bookmarks) {
+      if (!bm || bm.chIdx === undefined || bm.paraIdx === undefined) continue;
+      const local = bookList.find(x => x.title === bm.bookTitle);
+      if (!local) continue;
+      const existing = await bookmarks.byBook(local.id);
+      if (existing.some(b => b.chIdx === bm.chIdx && b.paraIdx === bm.paraIdx)) continue;
+      await bookmarks.put({
+        bookId: local.id,
+        bookTitle: local.title,
+        chIdx: bm.chIdx,
+        paraIdx: bm.paraIdx,
+        text: bm.text || '',
+        createdAt: bm.createdAt || Date.now(),
+      });
+      bmCount++;
+    }
+  }
   // 字号偏好
   if (typeof data.fontSize === 'number') {
     await kv.set('fontSize', data.fontSize);
@@ -349,7 +371,7 @@ async function importBackup(data) {
   await refreshVocabCache();
   renderWords();
   renderReviewHome();
-  return `导入完成：新增 ${added} 词，跳过 ${skipped} 词${progressCount ? `，同步 ${progressCount} 本书进度` : ''}`;
+  return `导入完成：新增 ${added} 词，跳过 ${skipped} 词${progressCount ? `，同步 ${progressCount} 本书进度` : ''}${bmCount ? `，恢复 ${bmCount} 个书签` : ''}`;
 }
 
 async function renderWords() {

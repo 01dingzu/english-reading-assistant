@@ -1,7 +1,8 @@
-// reader.js — 阅读器渲染 + 点词查义
-import { $, el, TOKEN_RE, toast, findSentence, highlightInSentence } from './util.js';
-import { books, chapters, words } from './db.js';
+// reader.js — 阅读器渲染 + 点词查义 + 段落翻译 + 书签
+import { $, $$, el, TOKEN_RE, toast, fmtDate, findSentence, highlightInSentence, splitSentences } from './util.js';
+import { books, chapters, words, bookmarks, kv } from './db.js';
 import { lookup, inVocab } from './dict.js';
+import { translateSentence } from './translate.js';
 
 let currentBook = null;
 let currentCh = null;   // {title, paras}
@@ -23,7 +24,8 @@ export async function openBook(bookId) {
   currentBook = await books.get(Number(bookId));
   if (!currentBook) { toast('书不存在'); return; }
   chIdx = currentBook.progress?.ch || 0;
-  fontSize = (await import('./db.js')).kv.get('fontSize').then(v => v || 19).catch(() => 19);
+  const stored = await kv.get('fontSize');
+  fontSize = stored || 19;
   await renderChapter(chIdx);
   window.scrollTo(0, 0);
 }
@@ -46,7 +48,7 @@ async function renderChapter(idx) {
     box.append(el('h2', { class: 'ch-title' }, currentCh.title));
   }
   for (const para of currentCh.paras) {
-    box.append(buildPara(para));
+    box.append(buildParaBlock(para));
   }
   // 进度条按章节数 + 章内滚动近似
   updateProgress();
@@ -66,6 +68,53 @@ function buildPara(text) {
   }
   if (last < text.length) p.append(text.slice(last));
   return p;
+}
+
+// 段落块 = <p> + 「译」按钮 + 内联译文区
+function buildParaBlock(text) {
+  const wrap = el('div', { class: 'para-block' });
+  wrap.append(buildPara(text));
+  wrap.append(el('button', {
+    class: 'btn-tr', title: '翻译本段',
+    onclick: (e) => { e.stopPropagation(); toggleParaTr(wrap); },
+  }, '译'));
+  wrap.append(el('div', { class: 'para-tr', hidden: true }));
+  return wrap;
+}
+
+async function toggleParaTr(wrap) {
+  const box = wrap.querySelector('.para-tr');
+  if (!box.hidden) { box.hidden = true; return; }
+  box.hidden = false;
+  if (box.dataset.done) return;
+
+  const sents = splitSentences(wrap.querySelector('p').textContent);
+  const frag = document.createDocumentFragment();
+  for (const s of sents) {
+    frag.append(el('div', { class: 'tr-row' },
+      el('div', { class: 'tr-src' }, s),
+      el('div', { class: 'tr-dst' }, '…'),
+    ));
+  }
+  box.innerHTML = '';
+  box.append(frag);
+  box.dataset.done = '1';
+
+  // 逐句翻译（在线优先，失败自动回退离线直译，结果缓存）
+  for (let i = 0; i < sents.length; i++) {
+    const dst = box.children[i]?.querySelector('.tr-dst');
+    if (!dst) continue;
+    try {
+      const res = await translateSentence(sents[i]);
+      dst.textContent = res.text;
+      if (res.offline) {
+        const tag = el('span', { class: 'tr-tag' }, '离线直译');
+        dst.append(' ', tag);
+      }
+    } catch (e) {
+      dst.textContent = '（翻译失败）';
+    }
+  }
 }
 
 function updateProgress() {
@@ -123,6 +172,32 @@ async function showWordSheet(word, paraText) {
     const [a, hit, b] = highlightInSentence(sent, word);
     const ctx = el('div', { class: 'w-ctx' }, a,
       hit ? el('span', { class: 'hl' }, hit) : null, b);
+    const trBtn = el('button', {
+      class: 'btn-ghost w-ctx-tr-btn',
+      onclick: async (e) => {
+        const btn = e.target;
+        btn.disabled = true;
+        btn.textContent = '翻译中…';
+        try {
+          const res = await translateSentence(sent);
+          let dst = ctx.querySelector('.w-ctx-tr');
+          if (!dst) {
+            dst = el('div', { class: 'w-ctx-tr' });
+            ctx.append(dst);
+          }
+          dst.textContent = res.text;
+          if (res.offline) {
+            const tag = el('span', { class: 'tr-tag' }, '离线直译');
+            dst.append(' ', tag);
+          }
+          btn.textContent = '再译一次';
+        } catch (err) {
+          btn.textContent = '翻译失败，重试';
+        }
+        btn.disabled = false;
+      },
+    }, '译句');
+    ctx.append(trBtn);
     body.append(ctx);
   }
 
@@ -186,6 +261,8 @@ export function bindReaderUI() {
   $('#btn-next-ch').onclick = () => { renderChapter(chIdx + 1); window.scrollTo(0, 0); };
   $('#btn-font-plus').onclick = () => setFont(+1);
   $('#btn-font-minus').onclick = () => setFont(-1);
+  $('#btn-bookmark').onclick = () => addBookmark();
+  $('#btn-bookmark-list').onclick = () => showBookmarkList();
   $('#reader-content').addEventListener('click', onTokenClick);
   $('#sheet-backdrop').onclick = () => openSheet(false);
   window.addEventListener('scroll', () => {
@@ -193,9 +270,95 @@ export function bindReaderUI() {
   }, { passive: true });
 }
 
+// ---------- 书签 ----------
+// 当前视口靠上 1/3 处附近的段落作为锚点
+function currentParaIdx() {
+  const blocks = $$('#reader-content > .para-block');
+  if (!blocks.length) return 0;
+  const anchor = innerHeight / 3;
+  let best = 0, bestD = Infinity;
+  blocks.forEach((b, i) => {
+    const d = Math.abs(b.getBoundingClientRect().top - anchor);
+    if (d < bestD) { bestD = d; best = i; }
+  });
+  return best;
+}
+
+export async function addBookmark() {
+  if (!currentBook) { toast('请先打开一本书'); return; }
+  const paraIdx = currentParaIdx();
+  const text = (currentCh.paras[paraIdx] || '').slice(0, 80);
+  const list = await bookmarks.byBook(currentBook.id);
+  if (list.some(b => b.chIdx === chIdx && b.paraIdx === paraIdx)) {
+    toast('此位置已有书签');
+    return;
+  }
+  await bookmarks.put({
+    bookId: currentBook.id,
+    bookTitle: currentBook.title,
+    chIdx, paraIdx,
+    text,
+    createdAt: Date.now(),
+  });
+  toast('已加书签 🔖');
+}
+
+export async function showBookmarkList() {
+  if (!currentBook) { toast('请先打开一本书'); return; }
+  const list = await bookmarks.byBook(currentBook.id);
+  const body = $('#sheet-body');
+  body.innerHTML = '';
+  body.append(el('div', { class: 'bm-title' }, `书签 · ${currentBook.title}`));
+
+  if (!list.length) {
+    body.append(el('div', { class: 'bm-empty' },
+      '这本书还没有书签',
+      el('div', { class: 'bm-empty-sub' }, '阅读时点右上角 🔖 收藏当前位置，之后可一键跳回')));
+    openSheet(true);
+    return;
+  }
+
+  const sorted = [...list].sort((a, b) => (a.chIdx - b.chIdx) || (a.paraIdx - b.paraIdx));
+  for (const bm of sorted) {
+    const row = el('div', {
+      class: 'bm-row',
+      onclick: () => { openSheet(false); jumpToBookmark(bm); },
+    },
+      el('div', { class: 'bm-main' },
+        el('div', { class: 'bm-ch' }, `${bm.chIdx + 1} 章 · ${fmtDate(bm.createdAt)}`),
+        el('div', { class: 'bm-text' }, bm.text),
+      ),
+      el('button', {
+        class: 'bm-del', title: '删除书签',
+        onclick: async (e) => {
+          e.stopPropagation();
+          await bookmarks.del(bm.id);
+          showBookmarkList();
+        },
+      }, '×'),
+    );
+    body.append(row);
+  }
+  openSheet(true);
+}
+
+async function jumpToBookmark(bm) {
+  if (!currentBook || currentBook.id !== bm.bookId) {
+    await openBook(bm.bookId);
+  }
+  if (chIdx !== bm.chIdx) {
+    await renderChapter(bm.chIdx);
+  }
+  requestAnimationFrame(() => {
+    const blocks = $$('#reader-content > .para-block');
+    const target = blocks[bm.paraIdx]?.querySelector('p') || blocks[bm.paraIdx];
+    if (target) target.scrollIntoView({ block: 'start' });
+    updateProgress();
+  });
+}
+
 async function setFont(delta) {
   fontSize = Math.max(15, Math.min(26, fontSize + delta));
   $('#reader-content').style.fontSize = fontSize + 'px';
-  const { kv } = await import('./db.js');
   kv.set('fontSize', fontSize);
 }

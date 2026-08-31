@@ -1,6 +1,7 @@
 // test.mjs — 核心逻辑冒烟测试（Node 环境，无 DOM 依赖的模块）
 import { readFileSync } from 'fs';
-import { morphFallback, findSentence, highlightInSentence } from './js/util.js';
+import { morphFallback, findSentence, highlightInSentence, splitSentences } from './js/util.js';
+import { offlineTranslate } from './js/translate.js';
 
 let pass = 0, fail = 0;
 const t = (name, cond) => {
@@ -46,6 +47,16 @@ const s1 = findSentence(para, 'insulted');
 t('找到包含 insulted 的句子', s1.includes('insulted'));
 const [a, hit, b] = highlightInSentence(s1, 'insulted');
 t('高亮命中', hit === 'insulted' && a.endsWith(' '));
+t('splitSentences 拆出 2 句（引号后切分）', splitSentences(para).length === 2);
+t('splitSentences 第二句为引语', splitSentences(para)[1].includes('"Indeed,"'));
+
+// ---- 离线直译 ----
+console.log('[translate offline]');
+const ot = offlineTranslate('The quick brown fox jumps over the lazy dog.');
+t('离线直译产出中文', ot.includes('这') && ot.includes('越过'));
+t('离线直译保留英文标点', ot.endsWith('.'));
+t('离线直译未收录词原样保留', /fox|Fox/.test(ot));
+t('空串安全', offlineTranslate('') === '');
 
 // ---- SM-2 ----
 console.log('[sm-2]');

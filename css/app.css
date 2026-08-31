@@ -115,10 +115,67 @@ body {
   font-size: 20px; font-weight: 500; margin: 6px 0 18px;
   font-family: var(--reader-font);
 }
-.reader-content p { margin-bottom: 1em; text-align: justify; hyphens: auto; }
+.reader-content p { margin-bottom: 0.35em; text-align: justify; hyphens: auto; }
+.reader-content .para-block { margin-bottom: 1em; }
 .tok { cursor: pointer; border-radius: 3px; padding: 0 1px; }
 .tok:active { background: #E8E4D5; }
 .tok.in-vocab { text-decoration: underline dotted #0F6E56aa; text-underline-offset: 4px; }
+
+/* ---------- 段落翻译 ---------- */
+.btn-tr {
+  display: block; margin-left: auto;
+  font-size: 11px; color: var(--ink-3);
+  background: none; border: none; cursor: pointer;
+  padding: 2px 8px; font-family: var(--ui-font);
+}
+.btn-tr:hover { color: var(--accent); }
+.para-tr {
+  margin: 2px 0 10px;
+  padding: 10px 12px;
+  background: var(--surface);
+  border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0;
+  animation: fc-in .18s ease;
+}
+.tr-row { margin-bottom: 10px; }
+.tr-row:last-child { margin-bottom: 0; }
+.tr-src {
+  font-size: 13px; color: var(--ink-2);
+  font-family: var(--reader-font); line-height: 1.6;
+}
+.tr-dst { font-size: 14px; color: var(--ink); margin-top: 2px; line-height: 1.7; }
+.tr-tag {
+  font-size: 10px; color: var(--warn); background: var(--warn-soft);
+  border-radius: 6px; padding: 1px 6px; margin-left: 6px;
+  font-family: var(--ui-font); white-space: nowrap;
+}
+.w-ctx-tr-btn {
+  display: block; margin-top: 8px;
+  font-size: 12px; color: var(--accent);
+  background: none; border: none; cursor: pointer; padding: 0;
+  font-family: var(--ui-font);
+}
+.w-ctx-tr-btn:disabled { opacity: 0.5; }
+.w-ctx-tr { margin-top: 8px; font-size: 14px; color: var(--ink); line-height: 1.7; }
+
+/* ---------- 书签 ---------- */
+.bm-title { font-size: 15px; font-weight: 600; margin-bottom: 12px; }
+.bm-empty { text-align: center; color: var(--ink-3); padding: 28px 10px; font-size: 14px; }
+.bm-empty-sub { font-size: 12px; margin-top: 6px; }
+.bm-row {
+  display: flex; align-items: center; gap: 10px;
+  padding: 12px 4px; border-bottom: 0.5px solid var(--line);
+  cursor: pointer;
+}
+.bm-row:active { background: var(--accent-soft); }
+.bm-main { flex: 1; min-width: 0; }
+.bm-ch { font-size: 11px; color: var(--ink-3); }
+.bm-text {
+  font-size: 14px; color: var(--ink); margin-top: 3px; line-height: 1.5;
+  font-family: var(--reader-font);
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.bm-del { border: none; background: none; color: var(--ink-3); font-size: 16px; cursor: pointer; padding: 6px; }
 .reader-nav {
   display: flex; align-items: center; justify-content: space-between;
   margin-top: 16px; padding: 0 4px;
