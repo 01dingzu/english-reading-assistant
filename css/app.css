@@ -159,6 +159,72 @@ body {
 .w-senses { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
 
 /* ---------- words list ---------- */
+.words-mode {
+  display: flex; gap: 8px; margin-bottom: 16px;
+  background: var(--surface); border: 0.5px solid var(--line);
+  border-radius: var(--radius); padding: 4px;
+}
+.mode-btn {
+  flex: 1; padding: 9px 0; border: none; border-radius: 8px;
+  background: transparent; color: var(--ink-2);
+  font-size: 14px; font-family: var(--ui-font); cursor: pointer;
+}
+.mode-btn.active { background: var(--accent); color: #fff; }
+
+/* ---------- flashcards ---------- */
+.flash-topbar {
+  display: flex; justify-content: space-between; align-items: center;
+  margin-bottom: 14px; font-size: 13px; color: var(--ink-3);
+}
+.flash-card {
+  position: relative; width: 100%; min-height: 260px;
+  background: var(--paper); border: 0.5px solid var(--line);
+  border-radius: var(--radius); cursor: pointer;
+  display: flex; flex-direction: column;
+}
+.flash-face {
+  display: flex; flex-direction: column; align-items: center;
+  justify-content: center; text-align: center;
+  padding: 28px 22px; flex: 1;
+}
+.flash-front { animation: fc-in .22s ease; }
+.flash-back { display: none; animation: fc-in .22s ease; }
+.flash-card.flipped .flash-front { display: none; }
+.flash-card.flipped .flash-back { display: flex; }
+@keyframes fc-in { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+.fc-speak {
+  position: absolute; top: 12px; right: 12px;
+  font-size: 16px; padding: 4px 8px; line-height: 1;
+}
+.fc-word {
+  font-family: var(--reader-font); font-size: 36px; font-weight: 600;
+  letter-spacing: 0.5px; margin-top: 6px;
+}
+.fc-ph { font-size: 14px; color: var(--ink-3); margin-top: 8px; }
+.fc-hint { font-size: 12px; color: var(--ink-3); margin-top: 18px; opacity: 0.7; }
+.fc-tr {
+  font-size: 15px; line-height: 1.8; color: var(--ink);
+  max-width: 90%;
+}
+.fc-ctx-wrap {
+  margin-top: 16px; width: 100%; text-align: left;
+  background: var(--surface); border-left: 3px solid var(--accent);
+  border-radius: 0 8px 8px 0; padding: 10px 14px;
+}
+.fc-ctx-label {
+  font-size: 11px; color: var(--accent); font-weight: 500;
+  margin-bottom: 4px;
+}
+.fc-ctx {
+  font-family: var(--reader-font); font-size: 14px; line-height: 1.7;
+  color: var(--ink-2);
+}
+.fc-ctx-hl { color: var(--danger); font-weight: 500; }
+.fc-ctx-src { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+.fc-rate {
+  display: flex; gap: 10px; margin-top: 22px; width: 100%;
+}
+.fc-rate-btn { flex: 1; padding: 11px 0; font-size: 14px; }
 .words-summary {
   display: flex; gap: 10px; margin-bottom: 16px;
 }

@@ -5,6 +5,7 @@ import { books, words, kv } from './db.js';
 import { importFile, importRawText } from './importer.js';
 import { openBook, bindReaderUI, openSheet, speak } from './reader.js';
 import * as review from './review.js';
+import * as flashcards from './flashcards.js';
 import { SAMPLES, SAMPLE } from './sample.js';
 
 // 复习答题状态（提交后禁止重复提交，下一题时重置）
@@ -111,7 +112,8 @@ function route() {
   } else if (page === 'words') {
     $('#view-words').classList.add('active');
     $('#page-title').textContent = '生词本';
-    renderWords();
+    if (wordsMode === 'flash') setWordsMode('flash');
+    else renderWords();
   } else if (page === 'review') {
     $('#view-review').classList.add('active');
     $('#page-title').textContent = '复习';
@@ -187,6 +189,17 @@ function bindShelfUI() {
 
 // ---------- 生词本 ----------
 function bindWordsUI() {
+  // 模式切换：列表 / 闪卡
+  $('#btn-mode-list').onclick = () => setWordsMode('list');
+  $('#btn-mode-flash').onclick = () => setWordsMode('flash');
+  $('#fc-quit').onclick = () => setWordsMode('list');
+
+  // 闪卡：点卡片翻面
+  $('#flash-card').onclick = () => {
+    if (flashcards.isFlipped()) return; // 翻面后点击不再翻回，直接进入下一张由自评触发
+    flashcards.flip();
+  };
+
   // 备份：导出 / 导入（跨浏览器、跨设备搬运学习数据）
   $('#btn-backup-export').onclick = exportBackup;
   $('#btn-backup-import').onclick = () => $('#backup-file').click();
@@ -203,6 +216,39 @@ function bindWordsUI() {
       toast('导入失败：文件格式不对或已损坏');
     }
   };
+}
+
+// 生词本视图：切换列表 / 闪卡模式
+let wordsMode = 'list';
+async function setWordsMode(mode) {
+  wordsMode = mode;
+  $('#btn-mode-list').classList.toggle('active', mode === 'list');
+  $('#btn-mode-flash').classList.toggle('active', mode === 'flash');
+  $('#words-panel-list').hidden = mode !== 'list';
+  $('#words-panel-flash').hidden = mode !== 'flash';
+  if (mode === 'flash') {
+    $('#flash-card').hidden = true;
+    $('#flash-empty').style.display = 'none';
+    const ok = await flashcards.startFlashSession();
+    if (!ok) {
+      $('#flash-empty').style.display = 'block';
+      return;
+    }
+    $('#flash-card').hidden = false;
+    nextFlashCard();
+  }
+}
+
+async function nextFlashCard() {
+  const card = $('#flash-card');
+  const has = await flashcards.renderFlashCard(card);
+  if (!has) {
+    toast('本组闪卡刷完 🎉');
+    $('#fc-quit').click();
+    return;
+  }
+  const info = flashcards.flashInfo();
+  $('#fc-counter').textContent = `${info.done} / ${info.total}`;
 }
 
 // 导出：生词（含复习进度）+ 各书阅读进度 + 字号偏好
