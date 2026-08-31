@@ -170,6 +170,41 @@ async function renderShelf() {
       },
     }, el('span', { style: 'font-size:13px;color:var(--ink-2)' }, '＋ 恢复示例书'), el('span', { style: 'font-size:11px;color:var(--ink-3)' }, '伊索寓言 · 6 篇')));
   }
+
+  // 财经英语书库入口（公版内置，按需动态加载）
+  const financeTitles = new Set(['The Richest Man in Babylon', 'Reminiscences of a Stock Operator', 'The Wealth of Nations (Book I 选读)']);
+  if (!list.some(b => financeTitles.has(b.title))) {
+    grid.append(el('div', {
+      class: 'book-card',
+      style: 'border-style:dashed;align-items:center;justify-content:center;min-height:190px',
+      onclick: importFinanceSamples,
+    }, el('span', { style: 'font-size:13px;color:var(--ink-2)' }, '＋ 财经英语书库'), el('span', { style: 'font-size:11px;color:var(--ink-3)' }, '3 本公版经典 · 理财 / 股市 / 经济学')));
+  }
+}
+
+// 动态加载并导入财经英语内置书（数据较大，点入口才拉取）
+let financeImporting = false;
+async function importFinanceSamples() {
+  if (financeImporting) return;
+  financeImporting = true;
+  toast('正在加载财经书库…');
+  try {
+    const { FINANCE_SAMPLES } = await import('./finance-samples.js');
+    const existing = new Set((await books.all()).map(b => b.title));
+    let n = 0;
+    for (const s of FINANCE_SAMPLES) {
+      if (existing.has(s.title)) continue;
+      const book = await importRawText(s);
+      if (book) n++;
+    }
+    toast(n ? `已导入 ${n} 本财经书` : '财经书已在书架里');
+    renderShelf();
+  } catch (e) {
+    console.error(e);
+    toast('财经书库加载失败，请重试');
+  } finally {
+    financeImporting = false;
+  }
 }
 
 function bindShelfUI() {

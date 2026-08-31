@@ -12,3 +12,6 @@ e2e-save.mjs
 node_modules/
 test.mjs
 static-check.mjs
+
+# 财经书库数据加工中间产物（成品在 js/finance-samples.js）
+finance-src/
