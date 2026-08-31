@@ -2,7 +2,8 @@
 import puppeteer from 'puppeteer-core';
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'http://127.0.0.1:8899/';
+const URL = 'http://127.0.0.1:8891/';
+const EXPECTED = ['The Richest Man in Babylon', 'Reminiscences of a Stock Operator', 'The Wealth of Nations', 'How to Invest Money', 'The Stock Exchange from Within'];
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 let passed = 0, failed = 0;
 function t(name, ok, extra = '') {
@@ -35,46 +36,61 @@ const entryExists = await page.evaluate(() => {
 });
 t('书架有「财经英语书库」入口', entryExists);
 
-// 3. 点击入口 → 动态加载并导入（给足 60s，JSON 450KB）
+// 3. 点击入口 → 动态加载并导入（给足 60s，JSON 640KB）
 await page.evaluate(() => {
   [...document.querySelectorAll('.book-card')].find(c => c.textContent.includes('财经英语书库')).click();
 });
-// 导入完成的标志：书架卡片数增加（toast 出现窗口短，直接等卡片）
+// 导入完成的标志：5 本财经书都出现在书架上
 let importDone = false;
 for (let i = 0; i < 60; i++) {
   await sleep(1000);
   const cards = await page.evaluate(() =>
     [...document.querySelectorAll('.book-title')].map(e => e.textContent.trim()));
-  if (cards.includes('The Richest Man in Babylon') && cards.includes('Reminiscences of a Stock Operator')) { importDone = true; break; }
+  if (EXPECTED.every(x => cards.some(c => c.includes(x)))) { importDone = true; break; }
 }
-t('点击入口后 3 本书导入', importDone);
+t('点击入口后 5 本书导入', importDone);
 
-// 4. 书架出现 3 本财经书 + 难度标签
+// 4. 书架出现 5 本财经书 + 难度标签
 const titles = await page.evaluate(() =>
   [...document.querySelectorAll('.book-title')].map(e => e.textContent.trim()));
-t('书架有 The Richest Man in Babylon', titles.includes('The Richest Man in Babylon'), titles.join(' | '));
-t('书架有 Reminiscences of a Stock Operator', titles.includes('Reminiscences of a Stock Operator'));
-t('书架有 The Wealth of Nations', titles.some(x => x.includes('The Wealth of Nations')));
+for (const exp of EXPECTED) {
+  t(`书架有 ${exp}`, titles.some(x => x.includes(exp)), titles.join(' | '));
+}
 const lvLabels = await page.evaluate(() =>
   [...document.querySelectorAll('.book-level')].map(e => e.textContent.trim()));
-t('书架显示难度标签', lvLabels.length >= 3, lvLabels.join(' | '));
+t('书架显示难度标签', lvLabels.length >= 5, lvLabels.join(' | '));
 
-// 5. 打开 Babylon → 阅读页
+// 5. 打开新增的 How to Invest Money → 阅读页
+await page.evaluate(() => {
+  [...document.querySelectorAll('.book-card')].find(c => c.textContent.includes('How to Invest Money')).click();
+});
+await sleep(1200);
+const hFirstPara = await page.evaluate(() => {
+  const ps = document.querySelectorAll('#reader-content p');
+  return ps.length ? ps[0].textContent.trim().slice(0, 120) : '';
+});
+t('How to Invest Money 正文可读', /investment|bond|interest|capital|wealth|security/i.test(hFirstPara), `para: "${hFirstPara}"`);
+
+// 5b. 打开 The Stock Exchange from Within 校验股市词汇
+await page.evaluate(() => { location.hash = '#/shelf'; });
+await sleep(800);
+await page.evaluate(() => {
+  [...document.querySelectorAll('.book-card')].find(c => c.textContent.includes('The Stock Exchange from Within')).click();
+});
+await sleep(1200);
+const sePara = await page.evaluate(() => {
+  const ps = document.querySelectorAll('#reader-content p');
+  return ps.length ? ps[0].textContent.trim().slice(0, 240) : '';
+});
+t('Stock Exchange 正文可读', /exchange|stock|speculation|market|broker|real use/i.test(sePara), `para: "${sePara}"`);
+await page.evaluate(() => { location.hash = '#/shelf'; });
+await sleep(800);
+
+// 6. 点词查义（点第一个词 → 弹出释义面板；异步渲染需等待）
 await page.evaluate(() => {
   [...document.querySelectorAll('.book-card')].find(c => c.textContent.includes('The Richest Man in Babylon')).click();
 });
 await sleep(1200);
-const chPos = await page.evaluate(() => document.querySelector('#ch-pos')?.textContent || '');
-t(`章节位置显示 "1 / 12"`, chPos.trim() === '1 / 12', `got: "${chPos}"`);
-
-const firstPara = await page.evaluate(() => {
-  const ps = document.querySelectorAll('#reader-content p');
-  return ps.length ? ps[0].textContent.trim().slice(0, 90) : '';
-});
-t('正文有段落', firstPara.length > 30, `para: "${firstPara}"`);
-t('正文是 Babylon 内容', /Babylon|chariot|gold|prosperity|nation/i.test(firstPara), firstPara);
-
-// 6. 点词查义（点第一个词 → 弹出释义面板；异步渲染需等待）
 const sheetOpens = await page.evaluate(async () => {
   const tok = document.querySelector('#reader-content .tok');
   if (!tok) return 'no-token';

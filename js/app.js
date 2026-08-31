@@ -172,13 +172,13 @@ async function renderShelf() {
   }
 
   // 财经英语书库入口（公版内置，按需动态加载）
-  const financeTitles = new Set(['The Richest Man in Babylon', 'Reminiscences of a Stock Operator', 'The Wealth of Nations (Book I 选读)']);
+  const financeTitles = new Set(['The Richest Man in Babylon', 'Reminiscences of a Stock Operator', 'The Wealth of Nations (Book I 选读)', 'How to Invest Money', 'The Stock Exchange from Within']);
   if (!list.some(b => financeTitles.has(b.title))) {
     grid.append(el('div', {
       class: 'book-card',
       style: 'border-style:dashed;align-items:center;justify-content:center;min-height:190px',
       onclick: importFinanceSamples,
-    }, el('span', { style: 'font-size:13px;color:var(--ink-2)' }, '＋ 财经英语书库'), el('span', { style: 'font-size:11px;color:var(--ink-3)' }, '3 本公版经典 · 理财 / 股市 / 经济学')));
+    }, el('span', { style: 'font-size:13px;color:var(--ink-2)' }, '＋ 财经英语书库'), el('span', { style: 'font-size:11px;color:var(--ink-3)' }, '5 本公版经典 · 理财 / 股市 / 经济学 / 投资')));
   }
 }
 
