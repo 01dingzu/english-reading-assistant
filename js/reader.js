@@ -28,6 +28,24 @@ export async function openBook(bookId) {
   fontSize = stored || 19;
   await renderChapter(chIdx);
   window.scrollTo(0, 0);
+  maybeShowFeatureTip();
+}
+
+// 首次进入阅读页时，展示「句子翻译 + 书签」功能提示条
+const FEATURE_TIP_KEY = 'guide.features.v1';
+async function maybeShowFeatureTip() {
+  const tip = $('#feature-tip');
+  if (!tip) return;
+  try {
+    const shown = await kv.get(FEATURE_TIP_KEY);
+    if (shown) return;
+  } catch (e) { /* 忽略 kv 异常，照常展示 */ }
+  tip.hidden = false;
+}
+
+function dismissFeatureTip() {
+  $('#feature-tip').hidden = true;
+  kv.set(FEATURE_TIP_KEY, 1).catch(() => {});
 }
 
 async function renderChapter(idx) {
@@ -263,6 +281,7 @@ export function bindReaderUI() {
   $('#btn-font-minus').onclick = () => setFont(-1);
   $('#btn-bookmark').onclick = () => addBookmark();
   $('#btn-bookmark-list').onclick = () => showBookmarkList();
+  $('#feature-tip-close').onclick = () => dismissFeatureTip();
   $('#reader-content').addEventListener('click', onTokenClick);
   $('#sheet-backdrop').onclick = () => openSheet(false);
   window.addEventListener('scroll', () => {
