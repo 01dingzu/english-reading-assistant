@@ -3,7 +3,7 @@ import { $, $$, el, toast, fmtDate } from './util.js';
 import { loadDict, setVocabCache } from './dict.js';
 import { books, words, kv, bookmarks } from './db.js';
 import { importFile, importRawText } from './importer.js';
-import { openBook, bindReaderUI, openSheet, speak } from './reader.js';
+import { openBook, bindReaderUI, openSheet, speak, initTts } from './reader.js';
 import * as review from './review.js';
 import * as flashcards from './flashcards.js';
 import { SAMPLES, SAMPLE } from './sample.js';
@@ -57,6 +57,9 @@ async function boot() {
   try {
     await refreshVocabCache();
   } catch (e) { console.error(e); }
+
+  // 3.5 语音层：读设置、绑跟读控制条、等音色列表就绪（后台进行，不阻塞阅读）
+  initTts().catch(e => console.error(e));
 
   try {
     const seeded = await kv.get('seeded');

@@ -15,3 +15,6 @@ static-check.mjs
 
 # 财经书库数据加工中间产物（成品在 js/finance-samples.js）
 finance-src/
+
+# 验证脚本产出的截图
+.verify-flash-back.png

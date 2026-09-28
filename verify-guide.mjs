@@ -44,6 +44,7 @@ t('首次打开书显示功能提示条', tipShown);
 const tipTxt = await page.evaluate(() => document.querySelector('#feature-tip')?.innerText || '');
 t('提示条提到句子翻译', /译/.test(tipTxt), tipTxt.slice(0, 50));
 t('提示条提到书签', /书签|🔖|📑/.test(tipTxt), tipTxt.slice(0, 50));
+t('提示条提到朗读', /🔊|朗读/.test(tipTxt), tipTxt.slice(0, 50));
 
 // 2. 点「知道了」→ 提示条隐藏
 await page.evaluate(() => { document.querySelector('#feature-tip-close').click(); });
@@ -88,6 +89,7 @@ const guideTxt = clickRes.ok
 t('「?」可打开完整指引', clickRes.ok && !!guideTxt, JSON.stringify(clickRes));
 t('指引含翻译步骤', /点「译」|整段/.test(guideTxt), guideTxt.slice(0, 40));
 t('指引含书签步骤', /书签收藏位置/.test(guideTxt), guideTxt.slice(0, 40));
+t('指引含朗读步骤', /听全文|朗读/.test(guideTxt), guideTxt.slice(0, 40));
 await page.evaluate(() => { document.querySelector('#guide-close')?.click(); });
 
 console.log(`\n结果: ${passed} 通过, ${failed} 失败`);

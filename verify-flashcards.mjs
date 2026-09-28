@@ -1,11 +1,11 @@
 // verify-flashcards.mjs — 端到端验证闪卡完整交互流程
-// 前置：在仓库根目录启动静态服务器：python -m http.server 8734 --bind 127.0.0.1
-//       并全局安装 puppeteer-core：npm install -g puppeteer-core
+// 前置：在仓库根目录启动静态服务器：python -m http.server 8891 --bind 127.0.0.1
+//       puppeteer-core 由工作区 node_modules 提供（项目内 node_modules 为目录联接）
 // 脚本会写入几条测试生词到 IndexedDB，然后走：列表→闪卡→翻面→自评→下一张→完成退出。
 import puppeteer from 'puppeteer-core';
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'http://127.0.0.1:8734/';
+const URL = 'http://127.0.0.1:8891/';
 let pass = 0, fail = 0;
 const t = (name, cond) => { cond ? pass++ : fail++; console.log((cond ? '  ✓ ' : '  ✗ ') + name); };
 
@@ -19,6 +19,10 @@ page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 150)))
 await page.goto(URL, { waitUntil: 'networkidle2', timeout: 30000 });
 await page.waitForFunction(() => document.querySelector('#dict-status')?.textContent.includes('就绪'), { timeout: 60000 }).catch(() => {});
 
+// 首次访问会弹出新手指引（fixed 全屏遮罩），不移除会挡住后面所有点击
+await page.evaluate(() => document.querySelector('#guide-overlay')?.remove());
+await new Promise(r => setTimeout(r, 400));
+
 // 2. 直接向 IndexedDB 写入测试生词（绕过 UI，快速造数据）
 await page.evaluate(async () => {
   const words = [
@@ -26,7 +30,8 @@ await page.evaluate(async () => {
     { word: 'famished', ph: '\'fæmɪʃt', tr: 'adj. 极饿的', createdAt: Date.now() - 86400000, contexts: [{ sentence: 'After the long hike we were famished.', bookTitle: '示例书' }] },
     { word: 'bleat', ph: 'bliːt', tr: 'vi. 咩咩叫', createdAt: Date.now(), contexts: [{ sentence: 'The lamb began to bleat.', bookTitle: '示例书' }] },
   ];
-  const req = indexedDB.open('engreader', 1);
+  // 不带版本号 = 打开当前版本，避免与 db.js 的 DB_VER 冲突（VersionError）
+  const req = indexedDB.open('engreader');
   await new Promise((res, rej) => { req.onsuccess = res; req.onerror = () => rej(req.error); });
   const db = req.result;
   await new Promise((res, rej) => {
@@ -135,7 +140,7 @@ await page.click('#btn-mode-flash');
 await new Promise(r => setTimeout(r, 500));
 await page.click('#flash-card');
 await new Promise(r => setTimeout(r, 400));
-await page.screenshot({ path: 'C:/Users/liusiying/WorkBuddy/2026-08-31-13-27-39/english-reading-assistant/.verify-flash-back.png' });
+await page.screenshot({ path: new URL('./.verify-flash-back.png', import.meta.url) });
 
 await browser.close();
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

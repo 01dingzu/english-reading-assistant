@@ -39,6 +39,7 @@
         <span id="rd-chapter"></span>
       </div>
       <div class="reader-actions">
+        <button id="btn-tts" class="btn btn-ghost" title="朗读本章">🔊</button>
         <button id="btn-bookmark" class="btn btn-ghost" title="收藏当前位置">🔖</button>
         <button id="btn-bookmark-list" class="btn btn-ghost" title="书签列表">📑</button>
         <button id="btn-font-minus" class="btn btn-ghost" title="缩小字号">A-</button>
@@ -47,8 +48,8 @@
     </div>
     <div id="feature-tip" hidden>
       <div class="ft-msg">
-        <b>💡 句子翻译 + 书签</b>
-        <p>每段末尾的「<b>译</b>」按钮 = 整段逐句中译；点词弹出的释义里也能「<b>译句</b>」。右上角 <b>🔖</b> 收藏当前位置，<b>📑</b> 打开书签列表一键跳回。</p>
+        <b>💡 朗读 + 句子翻译 + 书签</b>
+        <p>右上角 <b>🔊</b> 一键朗读整章（AI 神经音色逐句跟读，读到哪高亮到哪）；每段末尾的「<b>读</b>」从本段开始，「<b>译</b>」按钮 = 整段逐句中译；点词弹出的释义里也能「<b>译句</b>」。右上角 <b>🔖</b> 收藏当前位置，<b>📑</b> 打开书签列表一键跳回。</p>
       </div>
       <button id="feature-tip-close" class="btn btn-ghost">知道了</button>
     </div>
@@ -108,6 +109,21 @@
 
 </main>
 
+<div id="tts-bar" hidden>
+  <div class="tts-meta">
+    <span class="tts-dot">🔊</span>
+    <span id="tts-voice" class="tts-voice-label">—</span>
+    <span id="tts-pos" class="tts-pos">0 句</span>
+  </div>
+  <div class="tts-btns">
+    <button id="tts-prev" class="tts-btn" title="上一句" aria-label="上一句">⏮</button>
+    <button id="tts-play" class="tts-btn tts-main" title="播放 / 暂停" aria-label="播放或暂停">▶</button>
+    <button id="tts-next" class="tts-btn" title="下一句" aria-label="下一句">⏭</button>
+    <button id="tts-stop" class="tts-btn" title="停止" aria-label="停止">■</button>
+    <button id="tts-set" class="tts-btn" title="语音设置" aria-label="语音设置">⚙</button>
+  </div>
+</div>
+
 <nav id="tabbar">
   <a href="#/shelf" data-tab="shelf"><span class="tab-ico">▤</span><span>书架</span></a>
   <a href="#/read" data-tab="reader"><span class="tab-ico">✎</span><span>阅读</span></a>
@@ -158,6 +174,13 @@
     </div>
     <div class="guide-step">
       <span class="guide-num">5</span>
+      <div>
+        <b>点 🔊 听全文（AI 音色）</b>
+        <p>右上角 🔊 从当前句开始逐句朗读，读到的句子会高亮并自动滚动；底部控制条可暂停、上下句、调语速、换音色。有 <b>Natural</b> 神经音色的浏览器（如 Edge）音质接近真人；没有的话可在设置里接自己的 AI 语音。</p>
+      </div>
+    </div>
+    <div class="guide-step">
+      <span class="guide-num">6</span>
       <div>
         <b>每天来「复习」打卡</b>
         <p>系统按遗忘曲线安排语境填空和听音拼写，做几道题，生词慢慢变熟词。</p>
