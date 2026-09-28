@@ -511,6 +511,7 @@ function openTtsSettings() {
       field('音色名', 'tts-cloud-voice', c.voice, 'alloy'),
       el('p', { class: 'tts-note' },
         'Key 只保存在本机浏览器（IndexedDB），不会上传到本站——本站没有后端。',
+        '接口需是 HTTPS 公网地址：浏览器会拦截网页对本地/明文接口的请求。',
         '配置后朗读音频由你选的服务合成，费用由该服务结算。'),
       el('button', {
         class: 'btn btn-primary', id: 'tts-cloud-save',

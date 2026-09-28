@@ -8,7 +8,7 @@ import puppeteer from 'puppeteer-core';
 import http from 'node:http';
 
 const CHROME = process.argv[2] || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PAGE_URL = 'http://127.0.0.1:8891/';
+const PAGE_URL = process.argv[3] || 'http://127.0.0.1:8891/';
 const STUB_PORT = 8899;
 const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
@@ -326,40 +326,49 @@ await page.evaluate(() => document.querySelector('#sheet-backdrop').click());
 await sleep(300);
 
 // ---------- G. 自备 AI 语音通道（打到本地桩服务）----------
-await page.evaluate(async (port) => {
-  const tts = await import('./js/tts.js');
-  await tts.saveSettings({
-    engine: 'cloud',
-    voiceName: '',
-    cloud: { enabled: true, endpoint: `http://127.0.0.1:${port}/v1`, key: 'stub-key', model: 'tts-1', voice: 'alloy' },
+// 只在本地 http origin 上可测：浏览器禁止 HTTPS 公网页面访问 http://127.0.0.1
+// 的本地接口（Private Network Access），线上跑这一段必然被拦，属于夹具边界。
+const LOCAL_ORIGIN = PAGE_URL.startsWith('http://127.0.0.1') || PAGE_URL.startsWith('http://localhost');
+if (!LOCAL_ORIGIN) {
+  console.log(`  跳过 · 当前页面源为 ${new URL(PAGE_URL).origin}，无法访问本地桩服务（需本地 http 源）`);
+}
+if (LOCAL_ORIGIN) {
+  await page.evaluate(async (port) => {
+    const tts = await import('./js/tts.js');
+    await tts.saveSettings({
+      engine: 'cloud',
+      voiceName: '',
+      cloud: { enabled: true, endpoint: `http://127.0.0.1:${port}/v1`, key: 'stub-key', model: 'tts-1', voice: 'alloy' },
+    });
+  }, STUB_PORT);
+  stubHits.length = 0;
+
+  const cloudRan = await page.evaluate(async () => {
+    const { Speaker } = await import('./js/tts.js');
+    const sp = new Speaker();
+    sp.setItems([{ text: 'Alpha sentence.', node: null }, { text: 'Beta sentence.', node: null }]);
+    await sp.play(0);
+    return { state: sp.state, index: sp.index };
   });
-}, STUB_PORT);
-stubHits.length = 0;
+  t('自备 AI 语音通道向接口发起了请求', stubHits.length > 0, `hits=${stubHits.length}`);
+  t('请求体包含模型 / 音色 / 待合成文本', !!stubHits[0] && stubHits[0].input.includes('Alpha'), JSON.stringify(stubHits[0] || {}));
+  t('两句都合成完（逐句请求）', stubHits.length === 2, `hits=${stubHits.length}`);
+  t('云端播放跑完整队列后自动归位', cloudRan.state === 'idle' && cloudRan.index === -1, JSON.stringify(cloudRan));
 
-const cloudRan = await page.evaluate(async () => {
-  const { Speaker } = await import('./js/tts.js');
-  const sp = new Speaker();
-  sp.setItems([{ text: 'Alpha sentence.', node: null }, { text: 'Beta sentence.', node: null }]);
-  await sp.play(0);
-  return { state: sp.state, index: sp.index };
-});
-t('自备 AI 语音通道向接口发起了请求', stubHits.length > 0, `hits=${stubHits.length}`);
-t('请求体包含模型 / 音色 / 待合成文本', !!stubHits[0] && stubHits[0].input.includes('Alpha'), JSON.stringify(stubHits[0] || {}));
-t('两句都合成完（逐句请求）', stubHits.length === 2, `hits=${stubHits.length}`);
-t('云端播放跑完整队列后自动归位', cloudRan.state === 'idle' && cloudRan.index === -1, JSON.stringify(cloudRan));
+  // 前端 UI 也应识别为 AI 语音
+  const barVoice = await page.evaluate(async () => {
+    const { getSettings } = await import('./js/tts.js');
+    return getSettings().engine;
+  });
+  t('引擎设置已切到自备 AI 语音', barVoice === 'cloud', barVoice);
 
-// 前端 UI 也应识别为 AI 语音
-const barVoice = await page.evaluate(async () => {
-  const { getSettings } = await import('./js/tts.js');
-  return getSettings().engine;
-});
-t('引擎设置已切到自备 AI 语音', barVoice === 'cloud', barVoice);
+  // 还原设置，避免污染后续断言
+  await page.evaluate(async () => {
+    const tts = await import('./js/tts.js');
+    await tts.saveSettings({ engine: 'auto', cloud: { enabled: false, key: '' } });
+  });
 
-// 还原设置，避免污染后续断言
-await page.evaluate(async () => {
-  const tts = await import('./js/tts.js');
-  await tts.saveSettings({ engine: 'auto', cloud: { enabled: false, key: '' } });
-});
+}
 
 // ---------- 收尾 ----------
 t('全程无运行时报错', errs.length === 0, errs.join(' | '));
