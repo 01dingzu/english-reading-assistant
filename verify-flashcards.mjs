@@ -3,9 +3,10 @@
 //       puppeteer-core 由工作区 node_modules 提供（项目内 node_modules 为目录联接）
 // 脚本会写入几条测试生词到 IndexedDB，然后走：列表→闪卡→翻面→自评→下一张→完成退出。
 import puppeteer from 'puppeteer-core';
+import { fileURLToPath } from 'node:url';
 
 const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'http://127.0.0.1:8891/';
+const PAGE_URL = 'http://127.0.0.1:8891/';   // 别叫 URL：会遮蔽全局 URL 构造函数（截图用）
 let pass = 0, fail = 0;
 const t = (name, cond) => { cond ? pass++ : fail++; console.log((cond ? '  ✓ ' : '  ✗ ') + name); };
 
@@ -16,7 +17,7 @@ page.on('console', m => { if (m.type() === 'error') console.log('  [console.erro
 page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 150)));
 
 // 1. 打开首页，等词典加载
-await page.goto(URL, { waitUntil: 'networkidle2', timeout: 30000 });
+await page.goto(PAGE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
 await page.waitForFunction(() => document.querySelector('#dict-status')?.textContent.includes('就绪'), { timeout: 60000 }).catch(() => {});
 
 // 首次访问会弹出新手指引（fixed 全屏遮罩），不移除会挡住后面所有点击
@@ -140,7 +141,7 @@ await page.click('#btn-mode-flash');
 await new Promise(r => setTimeout(r, 500));
 await page.click('#flash-card');
 await new Promise(r => setTimeout(r, 400));
-await page.screenshot({ path: new URL('./.verify-flash-back.png', import.meta.url) });
+await page.screenshot({ path: fileURLToPath(new URL('./.verify-flash-back.png', import.meta.url)) });
 
 await browser.close();
 console.log(`\n结果: ${pass} 通过, ${fail} 失败`);

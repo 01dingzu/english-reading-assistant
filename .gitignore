@@ -18,3 +18,10 @@ finance-src/
 
 # 验证脚本产出的截图
 .verify-flash-back.png
+
+# 语音方案实测产物（本地评估用，不入库）
+_kokoro/
+_kokoro_probe.html
+_kokoro_probe.mjs
+_kokoro_live.mjs
+_voices_probe.mjs

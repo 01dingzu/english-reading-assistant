@@ -8,18 +8,42 @@
 //
 // 引擎优先级：
 //   音色分级 Natural(1) > Online(2) > 本机(3) > 其他云端(4)
-//   engine='auto'   → 有 1/2 档音色就用它；没有且配了云端 key 才走云端；否则本机
+//   engine='auto'   → 启用了本地 Kokoro 就用它（离线可用、28 音色）；否则有 1/2 档音色就
+//                     用它；再没有且配了云端 key 才走云端；最后退本机音色
+//   engine='kokoro' → 只用本地 Kokoro（未就绪时退回浏览器音色，不会自动联网下载）
 //   engine='system' → 一律用浏览器内置音色
 //   engine='cloud'  → 一律走自备 AI 语音 API
 import { kv } from './db.js';
+import {
+  ensure as kokoroLoad, warmup as kokoroWarmup, synthesize as kokoroSynth, prefetch as kokoroPrefetch,
+  isReady as kokoroReady, isSupported as kokoroSupported, status as kokoroState,
+  DEFAULT_VOICE as KOKORO_DEFAULT_VOICE,
+} from './kokoro.js';
+
+// 让上层（reader.js）只 import tts.js 就能管全语音层
+export {
+  VOICES as KOKORO_VOICES, VOICE_GROUPS as KOKORO_GROUPS, DTYPES as KOKORO_DTYPES,
+  DEFAULT_VOICE as KOKORO_DEFAULT_VOICE,
+  voicesByGroup as kokoroVoicesByGroup, getVoice as kokoroVoice, detectDevice as kokoroDevice,
+  onProgress as onKokoroProgress, status as kokoroStatus, isReady as kokoroIsReady,
+  isSupported as kokoroSupported, clearAudioCache as clearKokoroAudio,
+  ensure as ensureKokoro, warmup as warmKokoro,
+} from './kokoro.js';
 
 const SETTINGS_KEY = 'tts.settings.v1';
 
 export const DEFAULT_SETTINGS = {
-  engine: 'auto',      // auto | system | cloud
-  voiceName: '',       // '' = 自动挑最优
+  engine: 'auto',      // auto | kokoro | system | cloud
+  voiceName: '',       // '' = 自动挑最优（浏览器音色）
   rate: 1,             // 0.6 ~ 1.5
   autoScroll: true,
+  // 本地神经语音（Kokoro-82M）：默认关闭，用户点「下载并启用」才联网下载
+  kokoro: {
+    enabled: false,
+    voice: KOKORO_DEFAULT_VOICE,
+    model: 'q8',
+    warm: false,       // 是否已成功加载过（下次进站可在后台恢复，不产生下载）
+  },
   cloud: {
     enabled: false,
     endpoint: 'https://api.openai.com/v1',
@@ -29,11 +53,13 @@ export const DEFAULT_SETTINGS = {
   },
 };
 
+
 let settings = JSON.parse(JSON.stringify(DEFAULT_SETTINGS));
 let settingsLoaded = false;
 let disabled = false;        // 浏览器完全没有 speechSynthesis
 let runtimeVoice = '';       // 运行期回退音色（不写回用户设置）
 let cloudBroken = false;     // 自备 AI 语音接口本次会话不可用
+let kokoroBroken = false;    // 本地模型本次会话不可用（加载/合成失败后不再反复重试）
 let activeSpeaker = null;    // 正在跟读的播放器，供 speakOnce 暂停用
 const failedVoices = new Set();   // 合成失败的音色（本次会话内不再尝试）
 const voiceAttempts = new Map();  // 音色 → 失败次数，用于「冷启动重试一次」
@@ -48,6 +74,7 @@ export async function loadSettings() {
       settings = {
         ...settings,
         ...saved,
+        kokoro: { ...DEFAULT_SETTINGS.kokoro, ...(saved.kokoro || {}) },
         cloud: { ...DEFAULT_SETTINGS.cloud, ...(saved.cloud || {}) },
       };
     }
@@ -60,6 +87,7 @@ export async function saveSettings(patch) {
   settings = {
     ...settings,
     ...patch,
+    kokoro: { ...settings.kokoro, ...((patch && patch.kokoro) || {}) },
     cloud: { ...settings.cloud, ...((patch && patch.cloud) || {}) },
   };
   // 用户显式改过音色/引擎 → 清掉运行期自愈状态，按新设置重新试
@@ -73,6 +101,8 @@ export async function saveSettings(patch) {
     failedVoices.clear();
     voiceAttempts.clear();
   }
+  // 动过本地模型设置 → 解除熔断，让它按新配置再试一次
+  if (patch && 'kokoro' in patch) kokoroBroken = false;
   try { await kv.set(SETTINGS_KEY, settings); } catch (e) { /* 忽略持久化失败 */ }
   return settings;
 }
@@ -164,6 +194,27 @@ export function hasCloudVoice() {
   const c = settings.cloud;
   return !!(c.enabled && c.key && c.endpoint);
 }
+/** 用户是否启用了本地神经语音（不代表模型已加载到内存） */
+export function hasKokoroVoice() {
+  return !!(settings.kokoro && settings.kokoro.enabled);
+}
+/** 本地模型此刻可直接用？ */
+export function kokoroUsable() {
+  return hasKokoroVoice() && !kokoroBroken && kokoroReady();
+}
+
+/**
+ * 本句是否走本地模型。
+ * 只在「用户启用过 + 模型已加载 + 本次会话没熔断」时成立：
+ * 没就绪时不联网抢跑，安静地退回浏览器音色，等用户点开设置自己下载。
+ */
+export function preferKokoro() {
+  if (kokoroBroken) return false;
+  if (!hasKokoroVoice() || !kokoroReady()) return false;
+  if (settings.engine === 'kokoro') return true;
+  if (settings.engine === 'auto') return true;   // 本地神经模型音色最多、离线可用 → auto 首选
+  return false;
+}
 
 /** 是否因为 AI 音色合成失败而降级到了别的音色（运行期状态） */
 export function isDegraded() {
@@ -176,7 +227,47 @@ export function preferCloud() {
   if (!hasCloudVoice()) return false;
   if (settings.engine === 'cloud') return true;
   if (settings.engine === 'system') return false;
+  if (settings.engine === 'kokoro') return false;  // 用户点名要本地的，别偷偷发请求
+  if (preferKokoro()) return false;
   return !hasAiVoice();
+}
+
+/** 当前引擎的显示名（顶栏/设置面板用） */
+export function engineLabel() {
+  if (preferKokoro()) return `本地 AI · ${settings.kokoro.voice || KOKORO_DEFAULT_VOICE}`;
+  if (preferCloud()) return `AI 语音 · ${settings.cloud.voice || 'alloy'}`;
+  const v = resolveVoice();
+  return v ? v.name.replace(/^Microsoft\s+/i, '') : '无可用音色';
+}
+
+/**
+ * 加载本地模型（幂等）。用于 initTts 的后台恢复和设置面板的「下载并启用」。
+ * 失败会把本地模型标记为本次会话不可用，避免每次朗读都卡一次。
+ */
+export async function prepareKokoro({ onProgress, markBroken = true } = {}) {
+  if (kokoroReady()) return true;
+  try {
+    await kokoroLoad({ model: settings.kokoro.model || 'q8', onProgress });
+    return true;
+  } catch (e) {
+    if (markBroken) kokoroBroken = true;
+    throw e;
+  }
+}
+
+/** 预热（合成一个短句）。加载完成后调用，把首次 shader 编译的等待提前消化掉。 */
+export async function warmKokoroVoice(voice) {
+  return kokoroWarmup(voice || settings.kokoro.voice || KOKORO_DEFAULT_VOICE);
+}
+
+/** 本地模型本轮会话是否已熔断（设置面板要如实告知，不能假装还能用） */
+export function isKokoroBroken() {
+  return kokoroBroken;
+}
+
+/** 设备/加载状态快照，透传给设置面板 */
+export function kokoroInfo() {
+  return { ...kokoroState(), supported: kokoroSupported() };
 }
 
 /** 语音列表就绪：等到出现英文音色为止（远程音色常常晚于本地音色到达） */
@@ -290,14 +381,21 @@ export class Speaker {
     this._set('idle');
   }
 
-  _killAudio() {
-    if (!this.audio) return;
-    const src = this.audio.src;
-    try { this.audio.pause(); } catch (e) { /* 忽略 */ }
-    this.audio = null;
-    if (src && src.startsWith('blob:')) {
-      try { URL.revokeObjectURL(src); } catch (e) { /* 忽略 */ }
+  _killAudio(revoke = true) {
+    // 关键：音频被中途掐掉时 onended / onerror 都不会来，必须主动让等待方收尾，
+    // 否则跟读循环会永远挂在这一句上（用户看到的是「停止键失灵」）。
+    const done = this._clipDone;
+    this._clipDone = null;
+    if (this.audio) {
+      const src = this.audio.src;
+      try { this.audio.pause(); } catch (e) { /* 忽略 */ }
+      this.audio = null;
+      // 本地模型的音频地址是缓存复用的，不能在播放结束时回收（交给缓存自己淘汰）
+      if (revoke && src && src.startsWith('blob:')) {
+        try { URL.revokeObjectURL(src); } catch (e) { /* 忽略 */ }
+      }
     }
+    if (done) done.resolve();
   }
 
   async _loop(my) {
@@ -305,18 +403,29 @@ export class Speaker {
     this._set('playing');
     while (my === this.token && this.index >= 0 && this.index < this.items.length) {
       const item = this.items[this.index];
-      let usedCloud = false;
+      let route = 'browser';
       try {
-        if (preferCloud()) {
-          usedCloud = true;
+        if (preferKokoro()) {
+          route = 'kokoro';
+          await this._speakKokoro(item.text);
+        } else if (preferCloud()) {
+          route = 'cloud';
           await this._speakCloud(item.text);
         } else {
           await this._speakBrowser(item.text);
         }
       } catch (e) {
         if (my !== this.token) return;
-        if (usedCloud) cloudBroken = true;
-        await this._handleFailure(e, my, usedCloud);
+        const msg = String((e && e.message) || e);
+        if (route === 'kokoro') {
+          // 本地模型失败（内存不足 / 加载被清 / 合成异常）→ 本次会话不再尝试，
+          // 同一句交给后面的音色重读，用户不会卡在这里等
+          kokoroBroken = true;
+          if (this.onerror) this.onerror(`本地 AI 音色不可用（${msg}），已切回其他音色`);
+        } else {
+          if (route === 'cloud') cloudBroken = true;
+          await this._handleFailure(e, my, route === 'cloud');
+        }
         if (my !== this.token) return;
       }
       if (my !== this.token) return;
@@ -425,17 +534,37 @@ export class Speaker {
     if (!res.ok) throw new Error(`AI 语音接口 ${res.status}`);
     const blob = await res.blob();
     if (!blob.size) throw new Error('AI 语音返回空音频');
-    const url = URL.createObjectURL(blob);
+    await this._playClip(URL.createObjectURL(blob));
+  }
+
+  /** 本地神经语音：浏览器内推理 → WAV → 播放 */
+  async _speakKokoro(text) {
+    const voice = settings.kokoro.voice || KOKORO_DEFAULT_VOICE;
+    const speed = Math.min(1.5, Math.max(0.6, Number(settings.rate) || 1));
+    const clip = await kokoroSynth(text, { voice, speed });
+    // 边播边算下一句：整章跟读不再句句干等推理
+    const next = this.items[this.index + 1];
+    if (next && next.text && preferKokoro()) kokoroPrefetch(next.text, { voice, speed });
+    await this._playClip(clip.url, { keepUrl: true });
+  }
+
+  _playClip(url, { keepUrl = false } = {}) {
     const audio = new Audio(url);
     audio.preload = 'auto';
     this.audio = audio;
-    await new Promise((resolve, reject) => {
-      audio.onended = () => resolve();
-      audio.onerror = () => reject(new Error('音频播放失败'));
+    return new Promise((resolve, reject) => {
+      // 交给实例保存，供 _killAudio 在「被停止/被打断」时收尾
+      this._clipDone = { resolve, reject };
+      audio.onended = () => { this._clipDone = null; resolve(); };
+      audio.onerror = () => { this._clipDone = null; reject(new Error('音频播放失败')); };
       const p = audio.play();
-      if (p && p.catch) p.catch(e => reject(new Error((e && e.message) || '播放被拦截')));
-    });
-    this._killAudio();
+      if (p && p.catch) {
+        p.catch(e => { this._clipDone = null; reject(new Error((e && e.message) || '播放被拦截')); });
+      }
+    }).then(
+      () => { this._killAudio(!keepUrl); },
+      (e) => { this._killAudio(!keepUrl); throw e; },
+    );
   }
 }
 
@@ -446,16 +575,18 @@ function findRawVoice(name) {
 }
 
 /** 单句朗读（点词、闪卡、复习用）：不干扰跟读播放器，只让它就地暂停 */
-export function speakOnce(text, { rate } = {}) {
-  if (disabled || typeof speechSynthesis === 'undefined') return false;
+export function speakOnce(text, { rate, onError } = {}) {
   if (activeSpeaker && activeSpeaker.state === 'playing') activeSpeaker.pause();
   try {
-    if (preferCloud()) {
+    // 本地模型 / 自备接口都是异步合成，交给一次性播放器；失败要说出来，不能静默
+    if (preferKokoro() || preferCloud()) {
       const one = new Speaker();
+      one.onerror = (m) => { if (onError) onError(m); };
       one.setItems([{ text, node: null }]);
-      one.play(0).catch(() => {});
+      one.play(0).catch((e) => { if (onError) onError(String((e && e.message) || e)); });
       return true;
     }
+    if (disabled || typeof speechSynthesis === 'undefined') return false;
     speechSynthesis.cancel();
     const v = resolveVoice();
     const u = new SpeechSynthesisUtterance(text);

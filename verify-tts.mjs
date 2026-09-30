@@ -289,7 +289,7 @@ const panel = await page.evaluate(() => ({
   tip: document.querySelector('#sheet-body .tts-tip')?.textContent || '',
 }));
 t('语音设置面板可打开', panel.open && panel.title === '语音设置', panel.title);
-t('三种引擎可选（自动 / 仅本机 / 自备 AI）', JSON.stringify(panel.chips) === JSON.stringify(['auto', 'system', 'cloud']), JSON.stringify(panel.chips));
+t('四种引擎可选（自动 / 本地 AI / 仅本机 / 自备 AI）', JSON.stringify(panel.chips) === JSON.stringify(['auto', 'kokoro', 'system', 'cloud']), JSON.stringify(panel.chips));
 t('音色列表按档位分组展示', panel.groups.length >= 1 && panel.voices > 0, `${panel.voices} 个 / 组:${panel.groups.join('、')}`);
 t('有语速滑块 / 自动滚动开关 / 试听', panel.hasRate && panel.hasAuto && panel.hasPreview);
 if (neural) t('有 AI 音色时给出「已检测到」提示', panel.tip.includes('已检测到 AI 神经音色'), panel.tip.slice(0, 40));

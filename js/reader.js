@@ -6,6 +6,9 @@ import { translateSentence } from './translate.js';
 import {
   Speaker, speakOnce, loadSettings, saveSettings, getSettings,
   listVoices, resolveVoice, hasAiVoice, hasCloudVoice, isDegraded, ready as ttsReady,
+  preferKokoro, preferCloud, hasKokoroVoice, kokoroUsable, engineLabel, isKokoroBroken,
+  kokoroInfo, kokoroVoicesByGroup, ensureKokoro, warmKokoro, onKokoroProgress,
+  KOKORO_DTYPES, KOKORO_DEFAULT_VOICE,
 } from './tts.js';
 
 let currentBook = null;
@@ -19,7 +22,8 @@ let readAlongItems = [];
 let readAlongBound = false;
 
 export function speak(text) {
-  if (!speakOnce(text)) toast('当前浏览器不支持朗读');
+  // 本地模型 / 自备接口是异步合成的，失败要说出来（不然用户只看到「点了没反应」）
+  if (!speakOnce(text, { onError: (m) => toast(m, 3400) })) toast('当前浏览器不支持朗读');
 }
 
 // ---------- 渲染 ----------
@@ -388,14 +392,7 @@ function updateTtsBar() {
   if (play) play.textContent = readAlong.state === 'playing' ? '⏸' : '▶';
   const info = $('#tts-voice');
   if (info) {
-    const s = getSettings();
-    let label;
-    if (hasCloudVoice() && (s.engine === 'cloud' || !hasAiVoice())) {
-      label = `AI 语音 · ${s.cloud.voice || 'alloy'}`;
-    } else {
-      const v = resolveVoice();
-      label = v ? v.name.replace(/^Microsoft\s+/i, '') : '无可用音色';
-    }
+    const label = engineLabel();
     info.textContent = label;
     info.title = label;
   }
@@ -403,7 +400,8 @@ function updateTtsBar() {
 
 // ---------- 语音设置面板 ----------
 const ENGINE_OPTIONS = [
-  ['auto', '自动（优先 AI 音色）'],
+  ['auto', '自动（优先本地/神经音色）'],
+  ['kokoro', '仅本地 AI 音色'],
   ['system', '仅本机音色'],
   ['cloud', '自备 AI 语音'],
 ];
@@ -419,17 +417,24 @@ function openTtsSettings() {
   const degraded = isDegraded();
   body.append(el('div', { class: 'tts-active' + (degraded ? ' warn' : '') },
     el('span', { class: 'tts-active-k' }, '当前音色'),
-    el('span', { class: 'tts-active-v', id: 'tts-active-voice' }, active ? active.name : '无可用音色'),
+    el('span', { class: 'tts-active-v', id: 'tts-active-voice' },
+      preferKokoro() || preferCloud() ? engineLabel() : (active ? active.name : '无可用音色')),
     degraded ? el('span', { class: 'tts-active-tag' }, '已降级') : null,
   ));
 
-  if (!hasAiVoice() && !hasCloudVoice()) {
+  if (preferKokoro()) {
+    body.append(el('div', { class: 'tts-tip ok' },
+      '本地 AI 音色已就绪：句子在浏览器里合成，离线也能读，不耗流量、不占额度。'));
+  } else if (hasKokoroVoice() && !kokoroUsable()) {
     body.append(el('div', { class: 'tts-tip' },
-      '当前浏览器只提供机械音色。用 Edge 打开本站即可获得 AI 神经音色（免费、无需配置）；',
-      '也可以在下方选「自备 AI 语音」，填入自己的语音 API。'));
+      '已启用本地 AI 音色，但模型本次没加载上（可能没下完 / 被清缓存 / 内存不足），现在先用后面的音色。'));
   } else if (hasAiVoice()) {
     body.append(el('div', { class: 'tts-tip ok' },
       '已检测到 AI 神经音色，朗读使用云端合成，需要联网。'));
+  } else if (!hasCloudVoice()) {
+    body.append(el('div', { class: 'tts-tip' },
+      '当前浏览器只提供机械音色。用 Edge 打开本站可获得 AI 神经音色（免费、无需配置）；',
+      '启用下面的「本地 AI 音色」可拿到 28 个接近真人的音色，离线也能用。'));
   }
 
   // 引擎
@@ -438,10 +443,13 @@ function openTtsSettings() {
     chipRow.append(el('button', {
       class: 'tts-chip' + (s.engine === k ? ' on' : ''),
       'data-engine': k,
-      onclick: async () => { await saveSettings({ engine: k }); openTtsSettings(); },
+      onclick: async () => { await saveSettings({ engine: k }); updateTtsBar(); openTtsSettings(); },
     }, label));
   }
   body.append(el('div', { class: 'tts-row' }, el('div', { class: 'tts-label' }, '朗读引擎'), chipRow));
+
+  // 本地神经语音（Kokoro-82M）：需要用户点一下才下载，属于可选能力
+  body.append(kokoroBlock());
 
   // 音色
   const voices = listVoices();
@@ -461,6 +469,7 @@ function openTtsSettings() {
         'data-voice': v.name,
         onclick: async () => {
           await saveSettings({ voiceName: v.name });
+          updateTtsBar();
           openTtsSettings();
         },
       },
@@ -469,7 +478,7 @@ function openTtsSettings() {
       ));
     }
   }
-  body.append(el('div', { class: 'tts-row' }, el('div', { class: 'tts-label' }, '音色'), voiceBox));
+  body.append(el('div', { class: 'tts-row' }, el('div', { class: 'tts-label' }, '浏览器内置音色'), voiceBox));
 
   // 语速
   const rateVal = el('span', { class: 'tts-rate-val', id: 'tts-rate-val' }, String(s.rate));
@@ -510,8 +519,10 @@ function openTtsSettings() {
       field('模型', 'tts-cloud-model', c.model, 'tts-1'),
       field('音色名', 'tts-cloud-voice', c.voice, 'alloy'),
       el('p', { class: 'tts-note' },
-        'Key 只保存在本机浏览器（IndexedDB），不会上传到本站——本站没有后端。',
-        '接口需是 HTTPS 公网地址：浏览器会拦截网页对本地/明文接口的请求。',
+        'Key 只保存在本机浏览器（IndexedDB），不会上传到本站——本站没有后端。'),
+      el('p', { class: 'tts-note' },
+        '接口需是 HTTPS 公网地址：浏览器会拦截网页对本地 / 明文接口的请求。'),
+      el('p', { class: 'tts-note' },
         '配置后朗读音频由你选的服务合成，费用由该服务结算。'),
       el('button', {
         class: 'btn btn-primary', id: 'tts-cloud-save',
@@ -535,6 +546,159 @@ function openTtsSettings() {
   }
 
   openSheet(true);
+}
+
+// ---------- 本地 AI 音色（Kokoro-82M）----------
+// 这是「可选能力」：不预下载，用户点一下才拉模型；下载后进浏览器缓存，之后离线可用。
+let kkSubscribed = false;
+
+function subscribeKokoroProgress() {
+  if (kkSubscribed) return;
+  kkSubscribed = true;
+  onKokoroProgress((p) => {
+    updateKokoroProgress(p);
+    // 下载完成 → 面板若还开着，就地重渲染成「音色列表」
+    if (p.phase === 'ready' && $('#sheet') && $('#sheet').hidden === false && $('#tts-kokoro')) {
+      openTtsSettings();
+    }
+  });
+}
+
+/** 进度条按 id 找节点：面板随时可能被重渲染，闭包里的引用会失效 */
+function updateKokoroProgress(snap) {
+  const wrap = $('#kk-progress');
+  const bar = $('#kk-bar');
+  const txt = $('#kk-progress-text');
+  if (!wrap || !bar) return;
+  const p = snap || (kokoroInfo().progress || {});
+  const active = p.phase === 'loading-lib' || p.phase === 'loading-model';
+  wrap.hidden = !active;
+  if (!active) { if (txt) txt.textContent = ''; return; }
+  const st = $('#kk-status');
+  if (st) st.textContent = p.phase === 'loading-lib' ? '正在获取语音引擎…' : '正在下载模型…';
+  if (p.phase === 'loading-lib') {
+    bar.style.width = '8%';
+    if (txt) txt.textContent = '正在获取语音引擎…';
+    return;
+  }
+  const pct = typeof p.pct === 'number' ? p.pct : -1;
+  // pct = -1 表示服务端没给总大小，只能显示已获取体积（假装有百分比是骗人）
+  bar.style.width = pct >= 0 ? Math.max(4, pct) + '%' : '100%';
+  bar.classList.toggle('indeterminate', pct < 0);
+  if (txt) {
+    txt.textContent = pct >= 0
+      ? `下载模型 ${pct}%（已获取 ${p.mb || 0} MB）`
+      : `下载模型…（已获取 ${p.mb || 0} MB）`;
+  }
+}
+
+async function enableKokoro() {
+  const btn = $('#kk-download');
+  if (btn) { btn.disabled = true; btn.textContent = '下载中…'; }
+  const s = getSettings();
+  const model = s.kokoro.model || 'q8';
+  try {
+    subscribeKokoroProgress();
+    await ensureKokoro({ model });                    // 进度走订阅更新
+    await warmKokoro(s.kokoro.voice || KOKORO_DEFAULT_VOICE);  // 预热：把首次 shader 编译的等待吃掉
+    const patch = { kokoro: { enabled: true, warm: true, model } };
+    // 点「下载并启用」的意图就是用它，顺手把引擎切过去（本机/自备引擎才需要改）
+    if (s.engine === 'system' || s.engine === 'cloud') patch.engine = 'kokoro';
+    await saveSettings(patch);
+    updateTtsBar();
+    toast('本地 AI 音色已就绪，共 28 个音色可选');
+  } catch (e) {
+    toast(`本地语音下载失败：${(e && e.message) || e}（可稍后再试）`, 4200);
+  }
+  if ($('#sheet') && $('#sheet').hidden === false) openTtsSettings();
+}
+
+function kokoroBlock() {
+  const s = getSettings();
+  const info = kokoroInfo();
+  const box = el('div', { class: 'tts-kokoro', id: 'tts-kokoro' });
+  box.append(el('div', { class: 'tts-label' }, '本地 AI 音色（Kokoro-82M）'));
+
+  if (!info.supported) {
+    box.append(el('p', { class: 'tts-note' }, '当前浏览器不支持本地语音模型（需要 WebAssembly + 音频播放）。'));
+    return box;
+  }
+
+  const stat = el('div', { class: 'kk-status', id: 'kk-status' });
+  if (info.loading) stat.textContent = '正在下载模型…';
+  else if (info.ready) stat.textContent = `已就绪 · ${info.device === 'webgpu' ? 'WebGPU 加速' : 'WebAssembly'}${isKokoroBroken() ? ' · 本次会话已停用' : ''}`;
+  else if (info.error) stat.textContent = `上次加载失败：${info.error}`;
+  else stat.textContent = '未启用';
+  box.append(stat);
+
+  box.append(el('div', { class: 'kk-progress', id: 'kk-progress', hidden: true },
+    el('div', { class: 'kk-bar', id: 'kk-bar' })));
+  box.append(el('div', { class: 'kk-progress-text', id: 'kk-progress-text' }, ''));
+
+  if (!info.ready) {
+    // 两句写成两个 p：el() 的多个子串是相邻文本节点，同一行会被连在一起读
+    box.append(el('p', { class: 'tts-note' },
+      '在浏览器里直接跑，28 个音色（美音 / 英音、男声 / 女声），免费、无需 Key，下载一次之后离线可用。'));
+    box.append(el('p', { class: 'tts-note' },
+      `首次启用需联网下载${KOKORO_DTYPES[s.kokoro.model] || KOKORO_DTYPES.q8}模型（看网速，通常 1 分钟内）；模型进浏览器缓存，不会重复下载。`));
+    box.append(el('button', {
+      class: 'btn btn-primary', id: 'kk-download',
+      onclick: () => enableKokoro(),
+    }, info.loading ? '下载中…' : '下载并启用'));
+    updateKokoroProgress();
+    return box;
+  }
+
+  // 已就绪 → 28 个音色（分组展示，避免和浏览器音色混在一起）
+  const cur = s.kokoro.voice || KOKORO_DEFAULT_VOICE;
+  const grid = el('div', { class: 'tts-voices kk-voices', id: 'kk-voices' });
+  for (const g of kokoroVoicesByGroup()) {
+    grid.append(el('div', { class: 'tts-group' }, `${g.label} · ${g.voices.length}`));
+    for (const v of g.voices) {
+      grid.append(el('div', {
+        class: 'tts-voice' + (v.id === cur ? ' on' : ''),
+        'data-kvoice': v.id,
+        onclick: async () => {
+          const now = getSettings();
+          await saveSettings({
+            kokoro: { voice: v.id },
+            engine: now.engine === 'system' ? 'kokoro' : now.engine,
+          });
+          updateTtsBar();
+          openTtsSettings();
+        },
+      },
+        el('span', { class: 'tts-voice-name' }, v.name + (v.rec ? ' ★' : '')),
+        el('span', { class: 'tts-voice-lang' }, v.id),
+      ));
+    }
+  }
+  box.append(grid);
+  const on = preferKokoro();
+  const enabled = !!s.kokoro.enabled;
+  box.append(el('div', { class: 'kk-actions' },
+    el('button', {
+      class: 'btn', id: 'kk-preview',
+      onclick: () => speak('Reading opens a door that no one can close.'),
+    }, '试听当前音色'),
+    el('button', {
+      class: 'tts-chip' + (on ? ' on' : ''), id: 'kk-use',
+      onclick: async () => {
+        await saveSettings({ engine: 'kokoro' });
+        updateTtsBar();
+        openTtsSettings();
+      },
+    }, on ? '正在使用' : '设为当前引擎'),
+    // 模型留在浏览器缓存里，随时可以再开；停用只是不再用它朗读
+    el('button', {
+      class: 'tts-chip' + (enabled ? ' on' : ''), id: 'kk-toggle',
+      onclick: async () => {
+        await saveSettings({ kokoro: { enabled: !enabled } });
+        updateTtsBar();
+        openTtsSettings();
+      },
+    }, enabled ? '已启用' : '已停用')));
+  return box;
 }
 
 function field(label, id, value, placeholder, type = 'text') {
@@ -572,10 +736,19 @@ export function bindReaderUI() {
   window.addEventListener('hashchange', () => requestAnimationFrame(updateTtsBar));
 }
 
-/** 语音层初始化：读设置 → 绑事件 → 等音色列表 */
+/** 语音层初始化：读设置 → 绑事件 → 等音色列表 → 恢复本地模型（命中缓存，不产生下载） */
 export async function initTts() {
   await loadSettings();
   bindReadAlong();
+  subscribeKokoroProgress();
+  const s = getSettings();
+  // 只有「上次成功加载过」才在后台恢复：没下载完就进站的用户不该被悄悄吃掉 90MB 流量
+  if (s.kokoro.enabled && s.kokoro.warm) {
+    ensureKokoro({ model: s.kokoro.model })
+      .then(() => warmKokoro(s.kokoro.voice))
+      .then(() => updateTtsBar())
+      .catch(() => { /* 加载不上就本次会话退浏览器音色，设置面板会如实说明 */ });
+  }
   await ttsReady();
   updateTtsBar();
 }
