@@ -418,7 +418,7 @@ const fresh = await js(() => ({
 }));
 t('新用户看到「未启用 + 下载入口」而不是音色列表',
   /未启用/.test(fresh.ready) && fresh.btn.includes('下载并启用') && fresh.voices === 0, JSON.stringify(fresh));
-t('下载前说明体积与离线可用', /88 MB|88MB/.test(fresh.note) && /离线/.test(fresh.note), fresh.note.slice(0, 60));
+t('下载前说明体积与「不再联网」', /88 MB|88MB/.test(fresh.note) && /不再联网|离线/.test(fresh.note), fresh.note.slice(0, 60));
 t('未下载时不显示进度条', fresh.progressHidden === true);
 
 await js(() => document.querySelector('#kk-download').click());

@@ -638,7 +638,7 @@ function kokoroBlock() {
   if (!info.ready) {
     // 两句写成两个 p：el() 的多个子串是相邻文本节点，同一行会被连在一起读
     box.append(el('p', { class: 'tts-note' },
-      '在浏览器里直接跑，28 个音色（美音 / 英音、男声 / 女声），免费、无需 Key，下载一次之后离线可用。'));
+      '在浏览器里直接跑，28 个音色（美音 / 英音、男声 / 女声），免费、无需 Key；下载一次之后朗读不再联网。'));
     box.append(el('p', { class: 'tts-note' },
       `首次启用需联网下载${KOKORO_DTYPES[s.kokoro.model] || KOKORO_DTYPES.q8}模型（看网速，通常 1 分钟内）；模型进浏览器缓存，不会重复下载。`));
     box.append(el('button', {

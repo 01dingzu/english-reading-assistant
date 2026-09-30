@@ -17,6 +17,12 @@ const BUILTIN = new Set([
   'DOMParser', 'indexedDB', 'IDBKeyRange', 'JSZip', 'URL', 'Blob', 'File', 'FileReader',
   'process', 'module', 'exports', 'arguments', 'structuredClone', 'queueMicrotask',
   'requestAnimationFrame', 'getComputedStyle', 'localStorage', 'performance',
+  // Web API / 类型化数组（本地语音模型、音频编码会用到）
+  'Audio', 'AudioContext', 'OffscreenCanvas', 'caches', 'WebAssembly', 'crypto',
+  'atob', 'btoa', 'TextDecoder', 'TextEncoder', 'AbortController', 'Event',
+  'CustomEvent', 'Worker', 'MediaRecorder', 'Notification', 'Image',
+  'ArrayBuffer', 'DataView', 'Int16Array', 'Uint8Array', 'Float32Array', 'Uint16Array',
+  'Int32Array', 'Uint32Array', 'URLSearchParams', 'FormData', 'Headers', 'Request', 'Response',
 ]);
 
 function collectDefs(src) {
@@ -31,6 +37,18 @@ function collectDefs(src) {
     m[1].split(',').forEach(s => add(s.trim().split(/\s+as\s+/).pop()));
   // class 声明
   for (const m of src.matchAll(/\bclass\s+([A-Za-z_$][\w$]*)/g)) add(m[1]);
+  // class 体内的成员方法（async / static / get / set / *）——它们长得像函数调用，
+  // 不登记就会被当成「未定义引用」（Speaker._loop / setItems 曾整片误报）。
+  for (const cm of src.matchAll(/\bclass\s+[A-Za-z_$][\w$]*[^{]*\{/g)) {
+    let depth = 0, start = cm.index + cm[0].length - 1, end = -1;
+    for (let j = start; j < src.length; j++) {
+      if (src[j] === '{') depth++;
+      else if (src[j] === '}') { depth--; if (depth === 0) { end = j; break; } }
+    }
+    if (end < 0) continue;
+    const body = src.slice(start, end);
+    for (const m of body.matchAll(/(?:^|\n)\s*(?:async\s+)?(?:static\s+)?(?:get\s+|set\s+)?\*?\s*([A-Za-z_$][\w$]*)\s*\(/g)) add(m[1]);
+  }
   // import 绑定
   for (const m of src.matchAll(/import\s+(?:\*\s+as\s+([A-Za-z_$][\w$]*)|\{([^}]+)\})?\s*(?:from|;)/g)) {
     if (m[1]) add(m[1]);
@@ -46,6 +64,12 @@ function collectDefs(src) {
   }
   // 标签/属性简写对象 { name }
   for (const m of src.matchAll(/[{,]\s*([A-Za-z_$][\w$]*)\s*[,}]/g)) add(m[1]);
+  // 参数里的解构：function f(a, { rate, onError } = {}) —— 这些也是定义
+  for (const m of src.matchAll(/\(([^()]{0,300})\)/g)) {
+    for (const d of m[1].matchAll(/\{([^{}]{1,200})\}/g)) {
+      d[1].split(',').forEach(p => add(p.trim().split(/[:=]/)[0].trim()));
+    }
+  }
   return defined;
 }
 
