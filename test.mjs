@@ -1,7 +1,12 @@
-// test.mjs — 核心逻辑冒烟测试（Node 环境，无 DOM 依赖的模块）
+// test.mjs — 核心逻辑冒烟测试（Node 环境，纯逻辑模块）
+//
+// 原则：lookup / grade 一律 import 生产实现，**不要在这里复刻**。
+// 复刻版会和主代码各自演化——主代码改了，测试照样全绿，那是假绿灯。
 import { readFileSync } from 'fs';
 import { morphFallback, findSentence, highlightInSentence, splitSentences } from './js/util.js';
 import { offlineTranslate } from './js/translate.js';
+import { initDict, lookup } from './js/dict.js';
+import { grade, initSrs } from './js/review.js';
 
 let pass = 0, fail = 0;
 const t = (name, cond) => {
@@ -9,36 +14,28 @@ const t = (name, cond) => {
   else { fail++; console.log('  ✗', name); }
 };
 
-// ---- 词典查询逻辑（复刻 dict.js 的 lookup 流程）----
+// ---- 词典查询（真实现 + 真数据）----
 console.log('[dict lookup]');
 const data = JSON.parse(readFileSync('./data/dict.json', 'utf-8'));
-const DICT = new Map(data.w.map(r => [r[0], r]));
-const LEMMA = new Map(Object.entries(data.lemma));
+const dictSize = initDict(data);
 
-function lookup(raw) {
-  const w = raw.toLowerCase();
-  let hit = DICT.get(w);
-  if (hit) return hit;
-  const via = LEMMA.get(w);
-  if (via && (hit = DICT.get(via))) return hit;
-  const stem = morphFallback(w);
-  if (stem !== w && (hit = DICT.get(stem))) return hit;
-  return null;
-}
-
-t('词典规模 >= 30000', DICT.size >= 30000);
-t('lemma 表规模 >= 30000', LEMMA.size >= 30000);
-t('原词查询 perceive', lookup('perceive')?.[2]?.includes('理解'));
+t('词典规模 >= 30000', dictSize >= 30000);
+t('lemma 表规模 >= 30000', Object.keys(data.lemma).length >= 30000);
+t('原词查询 perceive', !!lookup('perceive')?.tr?.includes('理解'));
 t('大小写 PERCEIVE', lookup('PERCEIVE') !== null);
-t('变形 perceived 命中（词条或还原）', ['perceive', 'perceived'].includes(lookup('perceived')?.[0]));
-t('不规则 went -> go', lookup('went')?.[0] === 'go');
-t('复数 wolves -> wolf', lookup('wolves')?.[0] === 'wolf');
-t('比较级 happier -> happy', lookup('happier')?.[0] === 'happy');
+t('变形 perceived 命中（词条或还原）', ['perceive', 'perceived'].includes(lookup('perceived')?.word));
+t('不规则 went -> go', lookup('went')?.word === 'go');
+t('复数 wolves -> wolf', lookup('wolves')?.word === 'wolf');
+t('比较级 happier -> happy', lookup('happier')?.word === 'happy');
 t('ing 形式 reading -> read', lookup('reading') !== null);
 t('示例书词汇 ridiculed 可查', lookup('ridiculed') !== null);
 t('示例书词汇 famished 可查', lookup('famished') !== null);
-t('示例书词汇 trellised', lookup('trellised') !== null || lookup('trellised') === null); // 容许未收录
-t('生僻词 zyzzyva 可能缺失（不崩溃）', lookup('zyzzyva') !== undefined);
+t('生僻词查不崩（trellised / zyzzyva）',
+  [lookup('trellised'), lookup('zyzzyva')].every(r => r === null || typeof r.word === 'string'));
+t('还原词会带回原形信息', (() => {
+  const r = lookup('perceived');
+  return r && (r.word === 'perceive' ? r.variant === 'perceived' : true);
+})());
 
 // ---- 句子定位 ----
 console.log('[sentence]');
@@ -49,28 +46,23 @@ const [a, hit, b] = highlightInSentence(s1, 'insulted');
 t('高亮命中', hit === 'insulted' && a.endsWith(' '));
 t('splitSentences 拆出 2 句（引号后切分）', splitSentences(para).length === 2);
 t('splitSentences 第二句为引语', splitSentences(para)[1].includes('"Indeed,"'));
+t('morphFallback 兜底规则', morphFallback('happier') === 'happi' || morphFallback('happier').length >= 3);
 
 // ---- 离线直译 ----
 console.log('[translate offline]');
 const ot = offlineTranslate('The quick brown fox jumps over the lazy dog.');
 t('离线直译产出中文', ot.includes('这') && ot.includes('越过'));
 t('离线直译保留英文标点', ot.endsWith('.'));
-t('离线直译未收录词原样保留', /fox|Fox/.test(ot));
+// 注意：这两条以前是「未收录词原样保留」——它长期是绿的，因为旧版测试没初始化
+// dict.js 的词典，glossOf 查不到任何词，于是"所有词都原样保留"。词典真加载后
+// 才暴露出来：已收录词必须被译掉，未收录词才该原样留下。
+t('已收录词被译成中文', ot.includes('狐狸'));
+t('未收录词原样保留', offlineTranslate('A zyzzyva appeared.').includes('zyzzyva'));
 t('空串安全', offlineTranslate('') === '');
 
-// ---- SM-2 ----
+// ---- SM-2（真实现）----
 console.log('[sm-2]');
-let srs = { ef: 2.5, interval: 0, reps: 0, next: Date.now(), lapses: 0 };
-function grade(s, q) {
-  const x = { ...s };
-  if (q >= 3) {
-    x.reps += 1;
-    x.interval = x.reps === 1 ? 1 : x.reps === 2 ? 6 : Math.round(x.interval * x.ef);
-  } else { x.lapses += 1; x.reps = 0; x.interval = 1; }
-  x.ef = Math.max(1.3, x.ef + (0.1 - (5 - q) * (0.08 + (5 - q) * 0.02)));
-  x.next = Date.now() + x.interval * 86400000;
-  return x;
-}
+let srs = initSrs();
 srs = grade(srs, 5);
 t('第一次复习后 interval=1', srs.interval === 1);
 srs = grade(srs, 5);

@@ -33,13 +33,28 @@ function collectDefs(src) {
   for (const m of src.matchAll(/\bfunction\s*\*?\s*([A-Za-z_$][\w$]*)\s*\(/g)) add(m[1]);
   // const/let/var 声明（含 export、解构）
   for (const m of src.matchAll(/\b(?:const|let|var)\s+([A-Za-z_$][\w$]*)/g)) add(m[1]);
-  for (const m of src.matchAll(/\b(?:const|let|var)\s*\{([^}]+)\}/g))
-    m[1].split(',').forEach(s => add(s.trim().split(/\s+as\s+/).pop()));
+  for (const m of src.matchAll(/\b(?:const|let|var)\s*\{/g)) {
+    // 解构声明有四种写法，名字都不在开头：{ a, b: c, d as e, f = 默认值 }。
+    // 两个坑：①默认值要剪掉，否则登记进去的名字是整段 "f = 默认值"，真正的 f 反被判成未定义引用；
+    //        ②默认值里可能嵌对象（viewport = { width: 390 }），结尾的 } 必须配对找——
+    //          老写法 [^}]+ 会在内层 } 处提前收尾，后面的名字整片漏登记（setup 就这么漏过）。
+    const start = m.index + m[0].length - 1;
+    let depth = 0, end = -1;
+    for (let j = start; j < src.length; j++) {
+      if (src[j] === '{') depth++;
+      else if (src[j] === '}') { depth--; if (depth === 0) { end = j; break; } }
+    }
+    if (end < 0) continue;
+    src.slice(start + 1, end).replace(/[{}]/g, ' ').split(',').forEach((s) =>
+      add(s.trim().split(/\s+as\s+/).pop().split('=')[0].split(':').pop().trim()));
+  }
   // class 声明
   for (const m of src.matchAll(/\bclass\s+([A-Za-z_$][\w$]*)/g)) add(m[1]);
   // class 体内的成员方法（async / static / get / set / *）——它们长得像函数调用，
   // 不登记就会被当成「未定义引用」（Speaker._loop / setItems 曾整片误报）。
-  for (const cm of src.matchAll(/\bclass\s+[A-Za-z_$][\w$]*[^{]*\{/g)) {
+  // 名字可省：`window.Audio = class { constructor(){} play(){} }` 是匿名类表达式，
+  // 老的 `class\s+名字` 只认带名字的，匿名类的方法会整片误报。
+  for (const cm of src.matchAll(/\bclass\b[^{]*\{/g)) {
     let depth = 0, start = cm.index + cm[0].length - 1, end = -1;
     for (let j = start; j < src.length; j++) {
       if (src[j] === '{') depth++;
@@ -78,11 +93,15 @@ for (const path of process.argv.slice(2)) {
   const src = readFileSync(path, 'utf-8');
   const defined = collectDefs(src);
 
-  // 去掉 obj.method( 形式的成员调用、字符串、注释
+  // 去掉注释与字符串字面量，再抹掉 obj.method( 形式的成员调用。
+  //
+  // 字符串匹配必须带上转义分支 `\\.`：老写法 `'[^'\n]*'` 遇到正文里的撇号
+  // （don't / it's）会把「一个字符串的结束引号」和「下一个字符串的开始引号」配成一对，
+  // 从中间吞掉一大段代码、又漏出一段数据出来，于是 js/finance-samples.js 这种
+  // 塞满了英文原文的文件会整片误报——报得太多等于没报。
   const cleaned = src
-    .replace(/\/\*[\s\S]*?\*\//g, ' ')
-    .replace(/\/\/.*$/gm, ' ')
-    .replace(/'[^'\n]*'|"[^"\n]*"|`[^`]*`/g, '""')
+    .replace(/\/\*[\s\S]*?\*\/|\/\/[^\n]*|'(?:[^'\\\n]|\\.)*'|"(?:[^"\\\n]|\\.)*"|`(?:[^`\\]|\\.)*`/g,
+      (match) => (/^["'`]/.test(match) ? '""' : ' '))
     .replace(/\b[A-Za-z_$][\w$]*\s*\.\s*[\w$]+\s*\(/g, '(');
 
   const called = new Map();

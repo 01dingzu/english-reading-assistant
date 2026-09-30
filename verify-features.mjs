@@ -1,32 +1,13 @@
 // verify-features.mjs — 验证「段落翻译 + 词义表译句 + 书签」完整流程
 // 运行前提：python -m http.server 8891 常驻于项目根目录；脚本在 node workspace 下运行（有 puppeteer-core）
-import puppeteer from 'puppeteer-core';
+import { makeChecker, launchPage, removeGuide, finish, sleep } from './verify-lib.mjs';
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'http://127.0.0.1:8891/';
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-let passed = 0, failed = 0;
-function t(name, ok, extra = '') {
-  if (ok) { passed++; console.log(`  ✓ ${name}`); }
-  else { failed++; console.log(`  ✗ ${name} ${extra}`); }
-}
+const { t, state } = makeChecker();
 
-const browser = await puppeteer.launch({
-  executablePath: CHROME,
-  headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu'],
-});
-const page = await browser.newPage();
-page.on('console', m => { if (m.type() === 'error') console.log('  [console.error]', m.text().slice(0, 160)); });
-page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 220)));
-await page.setViewport({ width: 390, height: 844 });
-await page.goto(URL, { waitUntil: 'networkidle2' });
-await sleep(2000);
+const { browser, page } = await launchPage({ waitAfter: 2000 });
 
 // 0. 关新手引导，等书架渲染
-await page.evaluate(() => {
-  document.querySelectorAll('#guide-overlay, [class*=guide]').forEach(n => n.remove());
-});
+await removeGuide(page);
 await sleep(800);
 
 // 1. 打开书架第一本书
@@ -154,6 +135,4 @@ const backupOk = await page.evaluate(async () => {
 });
 t('书签已持久化到 IndexedDB', backupOk === true, String(backupOk));
 
-await browser.close();
-console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
-process.exit(failed ? 1 : 0);
+await finish({ browser, state });

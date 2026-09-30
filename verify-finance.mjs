@@ -1,32 +1,14 @@
 // verify-finance.mjs — 验证「财经英语书库」完整流程（点击导入 → 书架 → 阅读）
-import puppeteer from 'puppeteer-core';
+import { makeChecker, launchPage, removeGuide, finish, sleep } from './verify-lib.mjs';
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'http://127.0.0.1:8891/';
 const EXPECTED = ['The Richest Man in Babylon', 'Reminiscences of a Stock Operator', 'The Wealth of Nations', 'How to Invest Money', 'The Stock Exchange from Within'];
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-let passed = 0, failed = 0;
-function t(name, ok, extra = '') {
-  if (ok) { passed++; console.log(`  ✓ ${name}`); }
-  else { failed++; console.log(`  ✗ ${name} ${extra}`); }
-}
 
-const browser = await puppeteer.launch({
-  executablePath: CHROME,
-  headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu'],
-});
-const page = await browser.newPage();
-page.on('console', m => { if (m.type() === 'error') console.log('  [console.error]', m.text().slice(0, 150)); });
-page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 200)));
-await page.setViewport({ width: 390, height: 844 });
-await page.goto(URL, { waitUntil: 'networkidle2' });
-await sleep(1500);
+const { t, state } = makeChecker();
+
+const { browser, page } = await launchPage();
 
 // 1. 只关新手引导遮罩（不要动 sheet-backdrop）
-await page.evaluate(() => {
-  document.querySelectorAll('.guide-overlay, [class*=guide], [class*=onboard], .intro-js, #guide-overlay').forEach(n => n.remove());
-});
+await removeGuide(page);
 await sleep(500);
 
 // 2. 书架入口存在
@@ -118,6 +100,4 @@ const soPara = await page.evaluate(() => {
 });
 t('Stock Operator 正文可读', /stock|market|figures|broker|quotation/i.test(soPara), soPara);
 
-await browser.close();
-console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
-process.exit(failed ? 1 : 0);
+await finish({ browser, state });

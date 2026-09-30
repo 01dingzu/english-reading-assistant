@@ -2,26 +2,20 @@
 // 前置：在仓库根目录启动静态服务器：python -m http.server 8891 --bind 127.0.0.1
 //       puppeteer-core 由工作区 node_modules 提供（项目内 node_modules 为目录联接）
 // 脚本会写入几条测试生词到 IndexedDB，然后走：列表→闪卡→翻面→自评→下一张→完成退出。
-import puppeteer from 'puppeteer-core';
 import { fileURLToPath } from 'node:url';
+import { makeChecker, launchPage, removeGuide, finish, PAGE_URL } from './verify-lib.mjs';
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PAGE_URL = 'http://127.0.0.1:8891/';   // 别叫 URL：会遮蔽全局 URL 构造函数（截图用）
-let pass = 0, fail = 0;
-const t = (name, cond) => { cond ? pass++ : fail++; console.log((cond ? '  ✓ ' : '  ✗ ') + name); };
+const { t, state } = makeChecker();
 
-const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new' });
-const page = await browser.newPage();
-await page.setViewport({ width: 390, height: 844 });
-page.on('console', m => { if (m.type() === 'error') console.log('  [console.error]', m.text().slice(0, 120)); });
-page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 150)));
+// goto 由本脚本自己控制（要顺带等词典就绪），所以 autoGoto 关掉
+const { browser, page } = await launchPage({ goto: false });
 
 // 1. 打开首页，等词典加载
 await page.goto(PAGE_URL, { waitUntil: 'networkidle2', timeout: 30000 });
 await page.waitForFunction(() => document.querySelector('#dict-status')?.textContent.includes('就绪'), { timeout: 60000 }).catch(() => {});
 
 // 首次访问会弹出新手指引（fixed 全屏遮罩），不移除会挡住后面所有点击
-await page.evaluate(() => document.querySelector('#guide-overlay')?.remove());
+await removeGuide(page);
 await new Promise(r => setTimeout(r, 400));
 
 // 2. 直接向 IndexedDB 写入测试生词（绕过 UI，快速造数据）
@@ -143,6 +137,4 @@ await page.click('#flash-card');
 await new Promise(r => setTimeout(r, 400));
 await page.screenshot({ path: fileURLToPath(new URL('./.verify-flash-back.png', import.meta.url)) });
 
-await browser.close();
-console.log(`\n结果: ${pass} 通过, ${fail} 失败`);
-process.exit(fail ? 1 : 0);
+await finish({ browser, state });

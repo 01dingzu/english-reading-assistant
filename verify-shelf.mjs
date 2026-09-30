@@ -6,45 +6,23 @@
 //   书架点书 → 正文（底部高亮「书架」）→「← 书架」返回
 //   书架顶部「继续阅读」卡：首次不显示 → 读过后出现 → 记住章节 → 点它回到书里 → 换章跟着更新 → 删书自动收起
 //   #/read（无书号）不再是一条死路
-import puppeteer from 'puppeteer-core';
-import fs from 'node:fs';
-import os from 'node:os';
-import path from 'node:path';
+import { makeChecker, launchPage, removeGuide, finish, sleep, waitAppReady } from './verify-lib.mjs';
 
-const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PAGE_URL = process.env.PAGE_URL || 'http://127.0.0.1:8891/';
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-let passed = 0, failed = 0;
-function t(name, ok, extra = '') {
-  if (ok) { passed++; console.log(`  ✓ ${name}`); }
-  else { failed++; console.log(`  ✗ ${name} ${extra}`); }
-}
+const { t, state } = makeChecker();
 
 // 干净档案：不带上一次跑测试残留的 lastRead / 已导入书籍
-const profile = fs.mkdtempSync(path.join(os.tmpdir(), 'engreader-shelf-'));
-const browser = await puppeteer.launch({
-  executablePath: CHROME,
-  headless: 'new',
-  userDataDir: profile,
-  args: ['--no-sandbox', '--disable-gpu'],
-});
-const page = await browser.newPage();
 const errors = [];
-page.on('pageerror', e => errors.push(String(e).slice(0, 200)));
-page.on('console', m => { if (m.type() === 'error') errors.push('[console] ' + m.text().slice(0, 160)); });
-page.on('dialog', d => d.accept());
-await page.setViewport({ width: 390, height: 844 });
-await page.goto(PAGE_URL, { waitUntil: 'networkidle2' });
-await sleep(1500);
-await page.evaluate(() => document.querySelectorAll('#guide-overlay').forEach(n => n.remove()));
+const { browser, page, profile } = await launchPage({
+  cleanProfile: true,
+  profileName: 'engreader-shelf-',
+  collectErrors: errors,
+  acceptDialogs: true,
+});
+await removeGuide(page);
 
 // 等内置书预载完（词典加载 + 导入，需要几秒）
-let bookCount = 0;
-for (let i = 0; i < 60; i++) {
-  await sleep(500);
-  bookCount = await page.evaluate(() => document.querySelectorAll('.book-card').length);
-  if (bookCount > 0) break;
-}
+await waitAppReady(page);
+const bookCount = await page.evaluate(() => document.querySelectorAll('.book-card').length);
 t('书架已预装书', bookCount > 0, `${bookCount} 本`);
 
 // ---------- A. 底部标签 ----------
@@ -193,7 +171,4 @@ t('删掉那本书后「继续阅读」卡自动收起',
 
 t('整个过程没有脚本报错', errors.length === 0, errors.slice(0, 3).join(' | '));
 
-console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
-await browser.close();
-fs.rmSync(profile, { recursive: true, force: true });
-process.exit(failed ? 1 : 0);
+await finish({ browser, state, profile });

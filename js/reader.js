@@ -1,7 +1,7 @@
 // reader.js — 阅读器渲染 + 点词查义 + 段落翻译 + 书签
 import { $, $$, el, TOKEN_RE, toast, fmtDate, findSentence, highlightInSentence, splitSentences } from './util.js';
 import { books, chapters, words, bookmarks, kv } from './db.js';
-import { lookup, inVocab } from './dict.js';
+import { lookup, inVocab, refreshVocabCache } from './dict.js';
 import { translateSentence } from './translate.js';
 import {
   Speaker, speakOnce, loadSettings, saveSettings, getSettings,
@@ -304,8 +304,6 @@ async function addWord(word, sentence) {
   toast(`「${w}」已加入生词本`);
   // 更新高亮
   document.querySelectorAll(`.tok[data-w="${word}"]`).forEach(t => t.classList.add('in-vocab'));
-  const { setVocabCache } = await import('./dict.js');
-  const { refreshVocabCache } = await import('./app.js');
   await refreshVocabCache();
 }
 

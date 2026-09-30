@@ -44,10 +44,11 @@ export function nextLabel(rec) {
 }
 
 // ---------- 复习会话 ----------
+// 注意：「本批是否已作答」的状态在 app.js（它同时要管提交按钮与 Enter 键），
+// 这里不要再存一份——只写不读的影子状态最容易被误当成真正的判据。
 let queue = [];
 let queueTotal = 0;
 let current = null;
-let answered = false;
 
 export async function startSession() {
   const all = await words.all();

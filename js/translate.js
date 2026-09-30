@@ -94,6 +94,27 @@ async function onlineTranslate(text) {
 }
 
 const cachePrefix = 'tr:';
+const CACHE_MAX = 1000;    // 缓存句数上限
+const TRIM_EVERY = 25;     // 每写这么多条检查一次容量（不必每次都全表扫）
+let writes = 0;
+
+// 兼容两种值形状：v1 存的是裸字符串，v2 存 { t, ts }
+function textOf(v) { return typeof v === 'string' ? v : (v && v.t) || ''; }
+function tsOf(v) { return (v && typeof v === 'object' && v.ts) || 0; }
+
+/**
+ * 容量淘汰。kv 里 tr: 前缀的条目只增不减（一本书读下来就是几百上千条），
+ * 超过上限时按写入时间丢掉最旧的 1/4。
+ */
+async function trimCache() {
+  try {
+    const rows = await kv.all();
+    const trs = rows.filter(r => String(r.key).startsWith(cachePrefix));
+    if (trs.length <= CACHE_MAX) return;
+    trs.sort((a, b) => tsOf(a.value) - tsOf(b.value));
+    for (const r of trs.slice(0, Math.floor(trs.length / 4))) await kv.del(r.key);
+  } catch (e) { /* 淘汰失败不影响翻译本身 */ }
+}
 
 // 对外主入口：先缓存 → 在线 → 离线回退（结果一律缓存）
 export async function translateSentence(text) {
@@ -101,7 +122,8 @@ export async function translateSentence(text) {
   if (!src) return { text: '', offline: false, fromCache: false };
 
   const cached = await kv.get(cachePrefix + src).catch(() => null);
-  if (cached) return { text: cached, offline: false, fromCache: true };
+  const hit = textOf(cached);
+  if (hit) return { text: hit, offline: false, fromCache: true };
 
   let t = null, offline = false;
   try {
@@ -111,11 +133,19 @@ export async function translateSentence(text) {
     offline = true;
     t = offlineTranslate(src);
   }
-  await kv.set(cachePrefix + src, t).catch(() => {});
+  await kv.set(cachePrefix + src, { t, ts: Date.now() }).catch(() => {});
+  if (++writes % TRIM_EVERY === 0) trimCache();   // 后台淘汰，不阻塞本次翻译
   return { text: t, offline, fromCache: false };
 }
 
-// 清空翻译缓存（词典重装等场景用）
+/** 清空翻译缓存。返回清掉的条数。"词典重装 / 用户手动清理"时用 */
 export async function clearTranslateCache() {
-  // kv 无遍历 API，直接重建不可行——保留，按 key 覆盖即可
+  let n = 0;
+  try {
+    const rows = await kv.all();
+    for (const r of rows) {
+      if (String(r.key).startsWith(cachePrefix)) { await kv.del(r.key); n++; }
+    }
+  } catch (e) { /* 清不掉就不清，不影响阅读 */ }
+  return n;
 }

@@ -10,8 +10,6 @@ Thumbs.db
 # 本地测试与依赖
 e2e-save.mjs
 node_modules/
-test.mjs
-static-check.mjs
 
 # 财经书库数据加工中间产物（成品在 js/finance-samples.js）
 finance-src/
@@ -28,3 +26,6 @@ _kokoro_diag.mjs
 _voices_probe.mjs
 _shot.mjs
 _shots/
+
+# 代码审计探针（本地量渲染规模 / 字段完整性用）
+_audit_probe.mjs

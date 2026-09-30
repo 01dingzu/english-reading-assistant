@@ -37,7 +37,25 @@
 
 ## 技术栈
 
-纯 HTML / CSS / JavaScript（ES modules），无构建工具。依赖仅 [JSZip](https://stuk.github.io/jszip/)（EPUB 解析）。
+纯 HTML / CSS / JavaScript（ES modules），无构建工具。依赖仅 [JSZip](https://stuk.github.io/jszip/)（EPUB 解析，**按需加载**：只在真的要解析 EPUB 时注入，TXT / 内置书 / 财经书库都不付这 96KB）。
+
+## 开发与验证
+
+无构建步骤，但有几个本地检查脚本（都需要 `python -m http.server 8891 --bind 127.0.0.1` 常驻在项目根目录）：
+
+```bash
+node static-check.mjs js/*.js verify-*.mjs   # 静态引用检查：调用的函数是否都有定义
+node test.mjs                                # 单元测试（词典 / 断句 / 离线直译 / SM-2）
+node verify-shelf.mjs                        # 浏览器端回归：书架与阅读导航
+node verify-features.mjs                     # 段落翻译 + 词句翻译 + 书签
+node verify-guide.mjs                        # 新手指引
+node verify-finance.mjs                      # 财经书库导入到阅读
+node verify-flashcards.mjs                   # 闪卡交互
+node verify-tts.mjs [浏览器exe]              # 朗读链路（用 Edge 跑断言更强：有神经音色）
+node verify-kokoro.mjs                       # 本地 AI 音色（注入假模型，不真下 88MB）
+```
+
+`verify-*.mjs` 共用 `verify-lib.mjs`：起浏览器、收集 console/pageerror、断言计数、关掉新手引导遮罩、收尾打印都在那里。改 Chrome 路径、端口或视口只动一个文件。
 
 ## 数据来源
 

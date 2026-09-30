@@ -83,12 +83,6 @@ export function fmtDate(ts) {
   return `${d.getMonth() + 1}/${d.getDate()}`;
 }
 
-export function todayStart() {
-  const d = new Date();
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
-
 export function shuffle(arr) {
   const a = [...arr];
   for (let i = a.length - 1; i > 0; i--) {

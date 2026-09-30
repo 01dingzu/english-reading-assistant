@@ -4,20 +4,12 @@
 // 运行前提：python -m http.server 8891 常驻于项目根目录
 //   node verify-tts.mjs                       # 用 Chrome 跑
 //   node verify-tts.mjs <浏览器exe路径>        # 指定浏览器（Edge 有神经音色，断言会更强）
-import puppeteer from 'puppeteer-core';
 import http from 'node:http';
+import { makeChecker, launchPage, finish, sleep, waitAppReady, PAGE_URL } from './verify-lib.mjs';
 
-const CHROME = process.argv[2] || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PAGE_URL = process.argv[3] || 'http://127.0.0.1:8891/';
 const STUB_PORT = 8899;
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
 
-let passed = 0, failed = 0;
-const fails = [];
-function t(name, ok, extra = '') {
-  if (ok) { passed++; console.log(`  ✓ ${name}`); }
-  else { failed++; fails.push(name); console.log(`  ✗ ${name} ${typeof extra === 'string' ? extra : JSON.stringify(extra)}`); }
-}
+const { t, state } = makeChecker();
 
 // ---------- AI 语音桩服务（模拟 OpenAI 风格 /v1/audio/speech，返回 0.25s 静音 WAV）----------
 function silentWav(seconds = 0.25, rate = 8000) {
@@ -66,19 +58,17 @@ await new Promise(r => stub.listen(STUB_PORT, '127.0.0.1', r));
 // 注意：puppeteer 默认会加 --disable-component-extensions-with-background-pages，
 // 该参数会让 Edge 隐藏 Microsoft *Online (Natural) 神经音色。测 Edge 时必须去掉，
 // 否则最有价值的「AI 音色」链路根本没被覆盖到。
-const browser = await puppeteer.launch({
-  executablePath: CHROME,
-  headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu', '--autoplay-policy=no-user-gesture-required'],
-  ignoreDefaultArgs: ['--disable-component-extensions-with-background-pages'],
-});
-const page = await browser.newPage();
 const errs = [];
-page.on('console', m => { if (m.type() === 'error') errs.push(m.text().slice(0, 160)); });
-page.on('pageerror', e => errs.push('pageerror: ' + String(e).slice(0, 200)));
-await page.setViewport({ width: 400, height: 880 });
-await page.goto(PAGE_URL, { waitUntil: 'networkidle2' });
-await sleep(2200);
+const { browser, page } = await launchPage({
+  args: ['--autoplay-policy=no-user-gesture-required'],
+  ignoreDefaultArgs: ['--disable-component-extensions-with-background-pages'],
+  viewport: { width: 400, height: 880 },
+  collectErrors: errs,
+  waitAfter: 2200,
+});
+
+// 等词典与内置书真的就绪，再开始断言（后面要打开书、点段落上的「读」/「译」）
+await waitAppReady(page);
 
 console.log(`\n浏览器：${await page.evaluate(() => navigator.userAgent.replace(/^.*(Chrome\/[\d.]+).*$/, '$1'))}`);
 
@@ -391,8 +381,4 @@ if (LOCAL_ORIGIN) {
 // ---------- 收尾 ----------
 t('全程无运行时报错', errs.length === 0, errs.join(' | '));
 
-await browser.close();
-stub.close();
-console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
-if (fails.length) console.log('失败项：\n  - ' + fails.join('\n  - '));
-process.exit(failed ? 1 : 0);
+await finish({ browser, state, preClose: () => stub.close() });

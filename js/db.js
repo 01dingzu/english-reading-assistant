@@ -39,6 +39,9 @@ function tx(store, mode, fn) {
     const out = fn(t.objectStore(store));
     t.oncomplete = () => resolve(out && out.result !== undefined ? out.result : undefined);
     t.onerror = () => reject(t.error);
+    // 配额超限 / 提交阶段失败只会触发 abort，不会触发 error。
+    // 不接住的话 Promise 永不 settle——导入大书撞上配额时界面会静默卡死，连报错都没有。
+    t.onabort = () => reject(t.error || new Error('数据库事务中止（可能空间不足）'));
   }));
 }
 
@@ -58,6 +61,7 @@ export const books = {
     };
     t.oncomplete = () => resolve();
     t.onerror = () => reject(t.error);
+    t.onabort = () => reject(t.error || new Error('数据库事务中止（可能空间不足）'));
   })),
 };
 
@@ -82,6 +86,9 @@ export const kv = {
     return rec ? rec.value : undefined;
   },
   set: (key, value) => tx('kv', 'readwrite', s => s.put({ key, value })),
+  /** 全表读（含 value）。kv 没有遍历 API，翻译缓存的容量淘汰要靠它 */
+  all: () => tx('kv', 'readonly', s => s.getAll()),
+  del: (key) => tx('kv', 'readwrite', s => s.delete(key)),
 };
 
 // ---- bookmarks ----
@@ -93,6 +100,7 @@ export const bookmarks = {
     const req = idx.getAll(IDBKeyRange.only(bookId));
     req.onsuccess = () => resolve(req.result || []);
     req.onerror = () => reject(req.error);
+    t.onabort = () => reject(t.error || new Error('数据库事务中止（可能空间不足）'));
   })),
   get: (id) => tx('bookmarks', 'readonly', s => s.get(id)),
   put: (rec) => tx('bookmarks', 'readwrite', s => s.put(rec)),

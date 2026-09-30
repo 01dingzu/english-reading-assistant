@@ -11,18 +11,9 @@
 // 运行前提：python -m http.server 8891 常驻于项目根目录
 //   node verify-kokoro.mjs                        # 用 Chrome 跑
 //   node verify-kokoro.mjs <浏览器exe路径>
-import puppeteer from 'puppeteer-core';
+import { makeChecker, launchPage, removeGuide, finish, sleep, waitAppReady } from './verify-lib.mjs';
 
-const CHROME = process.argv[2] || 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const PAGE_URL = process.argv[3] || 'http://127.0.0.1:8891/';
-const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
-
-let passed = 0, failed = 0;
-const fails = [];
-function t(name, ok, extra = '') {
-  if (ok) { passed++; console.log(`  ✓ ${name}`); }
-  else { failed++; fails.push(name); console.log(`  ✗ ${name} ${typeof extra === 'string' ? extra : JSON.stringify(extra)}`); }
-}
+const { t, state } = makeChecker();
 
 // ---------- 注入式假模型 ----------
 // 用 evaluateOnNewDocument 安装：每次新文档都在，重载后依然生效，同时挡住任何真实的 CDN 下载。
@@ -69,26 +60,27 @@ function installMock() {
   });
 }
 
-const browser = await puppeteer.launch({
-  executablePath: CHROME,
-  headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu', '--autoplay-policy=no-user-gesture-required'],
-});
-const page = await browser.newPage();
 const errs = [];
 const offsite = [];
-page.on('console', (m) => { if (m.type() === 'error') errs.push(m.text().slice(0, 160)); });
-page.on('pageerror', (e) => errs.push('pageerror: ' + String(e).slice(0, 200)));
-page.on('request', (r) => {
-  const u = r.url();
-  if (/jsdelivr|huggingface|hf\.co/i.test(u)) offsite.push(u);
+const { browser, page } = await launchPage({
+  args: ['--autoplay-policy=no-user-gesture-required'],
+  viewport: { width: 400, height: 880 },
+  collectErrors: errs,
+  waitAfter: 2200,
+  setup: async (p) => {
+    // 装了假模型后不该有任何真实 CDN 请求，这里全程盯着
+    p.on('request', (r) => {
+      const u = r.url();
+      if (/jsdelivr|huggingface|hf\.co/i.test(u)) offsite.push(u);
+    });
+    await p.evaluateOnNewDocument(installMock);
+  },
 });
-await page.evaluateOnNewDocument(installMock);
-await page.setViewport({ width: 400, height: 880 });
-await page.goto(PAGE_URL, { waitUntil: 'networkidle2' });
-await sleep(2200);
-await page.evaluate(() => document.querySelectorAll('#guide-overlay').forEach((n) => n.remove()));
+await removeGuide(page);
 await sleep(300);
+
+// 等词典与内置书就绪：H 段要靠点开一本真书才能打开语音设置面板
+await waitAppReady(page);
 
 console.log(`\n浏览器：${await page.evaluate(() => navigator.userAgent.replace(/^.*(Chrome\/[\d.]+).*$/, '$1'))}`);
 
@@ -531,7 +523,4 @@ t('全程没有向 CDN / HuggingFace 发请求（注入生效，未真下载）'
   offsite.slice(0, 2).join(' | '));
 t('全程无运行时报错', errs.length === 0, errs.slice(0, 3).join(' | '));
 
-await browser.close();
-console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
-if (fails.length) console.log('失败项：\n  - ' + fails.join('\n  - '));
-process.exit(failed ? 1 : 0);
+await finish({ browser, state });

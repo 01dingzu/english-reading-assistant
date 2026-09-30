@@ -1,21 +1,20 @@
 // app.js — 路由与页面主控
 import { $, $$, el, toast, fmtDate } from './util.js';
-import { loadDict, setVocabCache } from './dict.js';
+import { loadDict, refreshVocabCache } from './dict.js';
 import { books, words, kv, bookmarks } from './db.js';
 import { importFile, importRawText } from './importer.js';
 import { openBook, bindReaderUI, openSheet, speak, initTts, getLastRead } from './reader.js';
 import * as review from './review.js';
 import * as flashcards from './flashcards.js';
 import { SAMPLES, SAMPLE } from './sample.js';
+import { clearTranslateCache } from './translate.js';
 
 // 复习答题状态（提交后禁止重复提交，下一题时重置）
 let answered = false;
 
 // ---------- vocab cache ----------
-export async function refreshVocabCache() {
-  const all = await words.all();
-  setVocabCache(new Set(all.map(r => r.word)));
-}
+// refreshVocabCache 现住在 dict.js（它管的就是「哪些词在生词本里」），
+// 这样 reader.js 加完生词可以直接取用，不必反向 import 本文件。
 
 // ---------- 全局错误兜底：任何脚本错误可见，不再无声无息 ----------
 window.addEventListener('error', (e) => {
@@ -298,6 +297,14 @@ function bindWordsUI() {
       toast('导入失败：文件格式不对或已损坏');
     }
   };
+
+  // 翻译缓存：kv 里 `tr:` 前缀的整句缓存会随阅读不断累积（一本书就是几百上千条），
+  // 平时由 translate.js 的容量淘汰兜底，这里给一个手动清空的口子。
+  $('#btn-clear-tr').onclick = async () => {
+    if (!confirm('清空已缓存的整句翻译？\n\n生词本、阅读进度、书签都不受影响，只是之后翻译会重新联网。')) return;
+    const n = await clearTranslateCache();
+    toast(n ? `已清空 ${n} 条翻译缓存` : '翻译缓存本来就是空的');
+  };
 }
 
 // 生词本视图：切换列表 / 闪卡模式
@@ -374,7 +381,17 @@ async function importBackup(data) {
     if (!rec || typeof rec.word !== 'string') continue;
     const exists = await words.get(rec.word);
     if (exists) { skipped++; continue; }
-    await words.put({ word: rec.word, ph: rec.ph || '', tr: rec.tr || '', createdAt: rec.createdAt || Date.now(), srs: rec.srs || undefined });
+    // 整条搬运：语境句（contexts）、考试标签、词频都要跟着走。
+    // 以前这里用白名单重建记录，会把 contexts 悄悄丢掉——备份搬到新设备后，
+    // 「语境生词本」就退化成普通词表，语境填空 / 闪卡语境块 / 听写提示全没了。
+    await words.put({
+      ...rec,
+      word: rec.word,
+      ph: rec.ph || '',
+      tr: rec.tr || '',
+      createdAt: rec.createdAt || Date.now(),
+      contexts: Array.isArray(rec.contexts) ? rec.contexts : [],
+    });
     added++;
   }
   // 阅读进度：按书名匹配

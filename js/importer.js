@@ -1,7 +1,7 @@
 // importer.js — TXT/EPUB 导入 + 难度估算
 import { TOKEN_RE } from './util.js';
 import { books, chapters } from './db.js';
-import { lookup, isCommonWord } from './dict.js';
+import { isCommonWord } from './dict.js';
 import { toast } from './util.js';
 
 const CH_RE = /^\s*(chapter|part|book|prologue|epilogue|scene|act)\b/i;
@@ -29,7 +29,30 @@ function parseTxt(text, filename) {
 }
 
 // ---------- EPUB ----------
+// JSZip 有 96KB，而它只在「导入 EPUB」这一条路径上用到（内置书、TXT、示例书、
+// 财经书库都不用），所以不再在 index.html 里同步加载，改成首次真的解析 EPUB 时再注入。
+// 这样首屏少一个阻塞脚本，且多半用户一辈子不会付这笔下载。
+let jszipWaiting = null;
+function loadJSZip() {
+  if (window.JSZip) return Promise.resolve(window.JSZip);
+  if (jszipWaiting) return jszipWaiting;          // 并发导入时只注入一次
+  jszipWaiting = new Promise((resolve, reject) => {
+    const s = document.createElement('script');
+    s.src = 'lib/jszip.min.js';
+    s.onload = () => window.JSZip
+      ? resolve(window.JSZip)
+      : reject(new Error('JSZip 已加载但未挂载，可能是文件损坏'));
+    s.onerror = () => {
+      jszipWaiting = null;                        // 允许下次重试
+      reject(new Error('JSZip 加载失败，请检查网络后重试'));
+    };
+    document.head.appendChild(s);
+  });
+  return jszipWaiting;
+}
+
 async function parseEpub(arrayBuffer) {
+  const JSZip = await loadJSZip();
   const zip = await JSZip.loadAsync(arrayBuffer);
   // container.xml -> opf path
   const containerFile = zip.file('META-INF/container.xml');
@@ -160,5 +183,3 @@ export async function importRawText({ title, author, chaptersRaw }) {
   }
   return book;
 }
-
-export { lookup };

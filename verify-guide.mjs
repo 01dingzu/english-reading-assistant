@@ -1,27 +1,11 @@
 // verify-guide.mjs — 验证「句子翻译 + 书签」功能指引
 // 运行前提：python -m http.server 8891 常驻于项目根目录；脚本在 node workspace 下运行（有 puppeteer-core）
-import puppeteer from 'puppeteer-core';
+import { makeChecker, launchPage, finish, sleep } from './verify-lib.mjs';
 
-const CHROME = 'C:/Program Files/Google/Chrome/Application/chrome.exe';
-const URL = 'http://127.0.0.1:8891/';
-const sleep = (ms) => new Promise(r => setTimeout(r, ms));
-let passed = 0, failed = 0;
-function t(name, ok, extra = '') {
-  if (ok) { passed++; console.log(`  ✓ ${name}`); }
-  else { failed++; console.log(`  ✗ ${name} ${extra}`); }
-}
+const { t, state } = makeChecker();
 
-const browser = await puppeteer.launch({
-  executablePath: CHROME,
-  headless: 'new',
-  args: ['--no-sandbox', '--disable-gpu'],
-});
-const page = await browser.newPage();
-page.on('console', m => { if (m.type() === 'error') console.log('  [console.error]', m.text().slice(0, 160)); });
-page.on('pageerror', e => console.log('  [pageerror]', String(e).slice(0, 220)));
-await page.setViewport({ width: 390, height: 844 });
-await page.goto(URL, { waitUntil: 'networkidle2' });
-await sleep(2000);
+// 这个脚本本身要验证「指引」，所以不能移除 #guide-overlay，只在下面点「开始阅读」
+const { browser, page } = await launchPage({ waitAfter: 2000 });
 
 // 0. 关掉首次欢迎引导（点「开始阅读」，顺带写入 guideShown），等书架渲染
 await page.evaluate(() => { document.querySelector('#guide-close')?.click(); });
@@ -92,6 +76,4 @@ t('指引含书签步骤', /书签收藏位置/.test(guideTxt), guideTxt.slice(0
 t('指引含朗读步骤', /听全文|朗读/.test(guideTxt), guideTxt.slice(0, 40));
 await page.evaluate(() => { document.querySelector('#guide-close')?.click(); });
 
-console.log(`\n结果: ${passed} 通过, ${failed} 失败`);
-await browser.close();
-process.exit(failed ? 1 : 0);
+await finish({ browser, state });

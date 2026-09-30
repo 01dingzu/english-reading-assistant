@@ -15,18 +15,18 @@
 //   engine='cloud'  → 一律走自备 AI 语音 API
 import { kv } from './db.js';
 import {
-  ensure as kokoroLoad, warmup as kokoroWarmup, synthesize as kokoroSynth, prefetch as kokoroPrefetch,
+  synthesize as kokoroSynth, prefetch as kokoroPrefetch,
   isReady as kokoroReady, isSupported as kokoroSupported, status as kokoroState,
   DEFAULT_VOICE as KOKORO_DEFAULT_VOICE,
 } from './kokoro.js';
 
 // 让上层（reader.js）只 import tts.js 就能管全语音层
 export {
-  VOICES as KOKORO_VOICES, VOICE_GROUPS as KOKORO_GROUPS, DTYPES as KOKORO_DTYPES,
+  VOICES as KOKORO_VOICES, DTYPES as KOKORO_DTYPES,
   DEFAULT_VOICE as KOKORO_DEFAULT_VOICE,
-  voicesByGroup as kokoroVoicesByGroup, getVoice as kokoroVoice, detectDevice as kokoroDevice,
-  onProgress as onKokoroProgress, status as kokoroStatus, isReady as kokoroIsReady,
-  isSupported as kokoroSupported, clearAudioCache as clearKokoroAudio,
+  voicesByGroup as kokoroVoicesByGroup, detectDevice as kokoroDevice,
+  onProgress as onKokoroProgress, isReady as kokoroIsReady,
+  isSupported as kokoroSupported,
   ensure as ensureKokoro, warmup as warmKokoro,
 } from './kokoro.js';
 
@@ -261,26 +261,6 @@ export function engineLabel() {
   if (preferCloud()) return `AI 语音 · ${settings.cloud.voice || 'alloy'}`;
   const v = resolveVoice();
   return v ? v.name.replace(/^Microsoft\s+/i, '') : '无可用音色';
-}
-
-/**
- * 加载本地模型（幂等）。用于 initTts 的后台恢复和设置面板的「下载并启用」。
- * 失败会把本地模型标记为本次会话不可用，避免每次朗读都卡一次。
- */
-export async function prepareKokoro({ onProgress, markBroken = true } = {}) {
-  if (kokoroReady()) return true;
-  try {
-    await kokoroLoad({ model: settings.kokoro.model || 'q8', onProgress });
-    return true;
-  } catch (e) {
-    if (markBroken) kokoroBroken = true;
-    throw e;
-  }
-}
-
-/** 预热（合成一个短句）。加载完成后调用，把首次 shader 编译的等待提前消化掉。 */
-export async function warmKokoroVoice(voice) {
-  return kokoroWarmup(voice || settings.kokoro.voice || KOKORO_DEFAULT_VOICE);
 }
 
 /** 本地模型本轮会话是否已熔断（设置面板要如实告知，不能假装还能用） */

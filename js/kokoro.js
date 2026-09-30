@@ -14,8 +14,9 @@
 //     下载完成后模型进 CacheStorage，离线也能继续用。
 //   - WebGPU 首次合成要编译 shader，第一句可能十几秒 → 提供 warmup() 预热。
 
-export const KOKORO_CDN = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
-export const KOKORO_MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
+// CDN / 模型 id 是本文件内部实现细节（换源或换模型只影响这里），不对外导出。
+const KOKORO_CDN = 'https://cdn.jsdelivr.net/npm/kokoro-js@1.2.1/dist/kokoro.web.js';
+const KOKORO_MODEL = 'onnx-community/Kokoro-82M-v1.0-ONNX';
 export const DEFAULT_VOICE = 'af_heart';
 
 /** 量化档位 → 体积（官方仓库实测体积，用于给用户一个心理预期） */

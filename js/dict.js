@@ -1,16 +1,14 @@
 // dict.js — 词典加载、查询、词形还原
 import { morphFallback } from './util.js';
+import { words } from './db.js';
 
 let DICT = null;        // Map: word -> {word, ph, tr, tag, frq}
 let LEMMA = null;       // Map: variant -> base
 let RANK = null;        // Map: word -> frequency rank (index)
 let _vocabCache = null; // Set: 生词本里的词
 
-export async function loadDict(onStatus) {
-  if (DICT) return;
-  const res = await fetch('data/dict.json');
-  if (!res.ok) throw new Error('dict.json 加载失败: ' + res.status);
-  const data = await res.json();
+/** 用已解析的词典数据初始化。浏览器走 loadDict（fetch），Node 测试直接喂对象 */
+export function initDict(data) {
   DICT = new Map();
   RANK = new Map();
   data.w.forEach((row, i) => {
@@ -18,10 +16,16 @@ export async function loadDict(onStatus) {
     RANK.set(row[0], i);
   });
   LEMMA = new Map(Object.entries(data.lemma));
-  if (onStatus) onStatus(`${DICT.size} 词已就绪`);
+  return DICT.size;
 }
 
-export function dictReady() { return DICT !== null; }
+export async function loadDict(onStatus) {
+  if (DICT) return;
+  const res = await fetch('data/dict.json');
+  if (!res.ok) throw new Error('dict.json 加载失败: ' + res.status);
+  initDict(await res.json());
+  if (onStatus) onStatus(`${DICT.size} 词已就绪`);
+}
 
 // 完整查词：原词 → 词形还原表 → 后备规则
 export function lookup(rawWord) {
@@ -51,3 +55,13 @@ export function isCommonWord(word, topN = 6000) {
 // 生词本缓存（阅读器高亮用）
 export function setVocabCache(set) { _vocabCache = set; }
 export function inVocab(word) { return _vocabCache && _vocabCache.has(word.toLowerCase()); }
+
+/**
+ * 重算生词缓存。
+ * 放在词典层是刻意的：它管的就是「哪些词在生词本里」。原先它住在 app.js，
+ * reader.js 加完生词得 `await import('./app.js')` 反向取用——造成 app ↔ reader 循环依赖。
+ */
+export async function refreshVocabCache() {
+  const all = await words.all();
+  setVocabCache(new Set(all.map(r => r.word)));
+}
