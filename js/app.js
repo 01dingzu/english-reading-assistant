@@ -3,7 +3,7 @@ import { $, $$, el, toast, fmtDate } from './util.js';
 import { loadDict, setVocabCache } from './dict.js';
 import { books, words, kv, bookmarks } from './db.js';
 import { importFile, importRawText } from './importer.js';
-import { openBook, bindReaderUI, openSheet, speak, initTts } from './reader.js';
+import { openBook, bindReaderUI, openSheet, speak, initTts, getLastRead } from './reader.js';
 import * as review from './review.js';
 import * as flashcards from './flashcards.js';
 import { SAMPLES, SAMPLE } from './sample.js';
@@ -101,14 +101,23 @@ function hideGuide() {
 // ---------- 路由 ----------
 function route() {
   const hash = location.hash || '#/shelf';
-  const [_, page, arg] = hash.split('/');
+  let [_, page, arg] = hash.split('/');
 
-  const tab = page === 'read' ? 'reader' : page || 'shelf';
+  // 「阅读」不是独立标签，而是书架的下钻页。访问 #/read（没带书号）时直接纠正到书架，
+  // 不给「标签亮着阅读、内容却是书架」这种死路留口子
+  // （replaceState 不触发 hashchange，不会来回打转）。
+  if (page === 'read' && !arg) {
+    history.replaceState(null, '', '#/shelf');
+    page = 'shelf';
+  }
+
+  // 正文都是从书架点进来的，底部标签就高亮「书架」
+  const tab = page === 'read' ? 'shelf' : page || 'shelf';
   $$('#tabbar a').forEach(a => a.classList.toggle('active', a.dataset.tab === tab));
 
   $$('.view').forEach(v => v.classList.remove('active'));
 
-  if (page === 'read' && arg) {
+  if (page === 'read') {
     $('#view-reader').classList.add('active');
     $('#page-title').textContent = '阅读';
     openBook(arg).catch(e => { console.error(e); toast('打开书籍失败'); });
@@ -138,6 +147,7 @@ async function renderShelf() {
   const grid = $('#shelf-grid');
   grid.innerHTML = '';
   $('#shelf-empty').style.display = list.length ? 'none' : 'block';
+  await renderContinueCard(list);
 
   for (const b of list) {
     const color = COVER_COLORS[b.id % COVER_COLORS.length];
@@ -183,6 +193,40 @@ async function renderShelf() {
       onclick: importFinanceSamples,
     }, el('span', { style: 'font-size:13px;color:var(--ink-2)' }, '＋ 财经英语书库'), el('span', { style: 'font-size:11px;color:var(--ink-3)' }, '5 本公版经典 · 理财 / 股市 / 经济学 / 投资')));
   }
+}
+
+// 书架顶部的「继续阅读」卡：阅读不再是独立标签，得有个一键回到上次位置的入口。
+// 书被删掉（或没读过任何书）时自动收起。
+async function renderContinueCard(list) {
+  const box = $('#shelf-continue');
+  if (!box) return;
+  const last = await getLastRead();
+  const book = last && list.find(b => b.id === last.bookId);
+  box.innerHTML = '';
+  if (!book) { box.hidden = true; return; }
+
+  const chCount = Math.max(1, book.chCount || 1);
+  const ch = Math.max(0, Math.min(Number(last.ch) || 0, chCount - 1));
+  const pct = Math.round((ch / chCount) * 100);
+  box.hidden = false;
+  box.append(el('div', {
+    class: 'continue-card',
+    id: 'continue-card',
+    onclick: () => { location.hash = `#/read/${book.id}`; },
+  },
+    el('div', {
+      class: 'continue-cover',
+      style: `background:${COVER_COLORS[book.id % COVER_COLORS.length]}`,
+    }, book.title.slice(0, 1).toUpperCase()),
+    el('div', { class: 'continue-main' },
+      el('div', { class: 'continue-k' }, '继续阅读'),
+      el('div', { class: 'continue-title' }, book.title),
+      el('div', { class: 'continue-meta' },
+        `第 ${ch + 1} / ${chCount} 章` + (pct > 0 ? ` · 已读 ${pct}%` : '')),
+      el('div', { class: 'continue-bar' }, el('span', { style: `width:${pct}%` })),
+    ),
+    el('span', { class: 'continue-go' }, '继续 →'),
+  ));
 }
 
 // 动态加载并导入财经英语内置书（数据较大，点入口才拉取）

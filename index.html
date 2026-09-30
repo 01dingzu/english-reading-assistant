@@ -24,6 +24,7 @@
       <button id="btn-import" class="btn btn-primary">导入书籍</button>
       <input type="file" id="file-input" accept=".txt,.epub" multiple hidden>
     </div>
+    <div id="shelf-continue" hidden></div>
     <div id="shelf-grid" class="shelf-grid"></div>
     <div id="shelf-empty" class="empty-hint">
       <p>书架还是空的</p>
@@ -126,7 +127,6 @@
 
 <nav id="tabbar">
   <a href="#/shelf" data-tab="shelf"><span class="tab-ico">▤</span><span>书架</span></a>
-  <a href="#/read" data-tab="reader"><span class="tab-ico">✎</span><span>阅读</span></a>
   <a href="#/words" data-tab="words"><span class="tab-ico">✦</span><span>生词本</span></a>
   <a href="#/review" data-tab="review"><span class="tab-ico">↻</span><span>复习</span></a>
 </nav>
@@ -147,8 +147,8 @@
     <div class="guide-step">
       <span class="guide-num">1</span>
       <div>
-        <b>选一本书，直接开读</b>
-        <p>书架已为你预装 3 本内置书（童话 → 寓言 → 经典短篇，难度递增）。也可以导入自己的 TXT / EPUB。</p>
+        <b>在书架点书，直接开读</b>
+        <p>书架已为你预装 3 本内置书（童话 → 寓言 → 经典短篇，难度递增），也可以导入自己的 TXT / EPUB。读完点左上「← 书架」回来，书架顶部会出现「继续阅读」卡片，一键回到上次读到的那一章。</p>
       </div>
     </div>
     <div class="guide-step">

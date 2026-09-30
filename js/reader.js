@@ -16,6 +16,18 @@ let currentCh = null;   // {title, paras}
 let chIdx = 0;
 let fontSize = 19;
 
+// ---------- 上次阅读位置（书架顶部「继续阅读」卡的数据源） ----------
+// 阅读已不是独立标签，而是书架的下钻页：从正文返回书架时，得有个「回到刚才那本」的入口。
+const LAST_READ_KEY = 'lastRead';
+
+export function getLastRead() {
+  return kv.get(LAST_READ_KEY).catch(() => undefined);
+}
+
+function rememberLastRead(bookId, ch) {
+  kv.set(LAST_READ_KEY, { bookId, ch, at: Date.now() }).catch(() => { /* 记不住不影响阅读 */ });
+}
+
 // ---------- 跟读（AI 音色逐句朗读） ----------
 const readAlong = new Speaker();
 let readAlongItems = [];
@@ -79,6 +91,7 @@ async function renderChapter(idx) {
   updateProgress();
   currentBook.progress = { ...currentBook.progress, ch: chIdx };
   books.put(currentBook);
+  rememberLastRead(currentBook.id, chIdx);
   refreshReadAlongQueue();
 }
 
