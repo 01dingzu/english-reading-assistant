@@ -34,38 +34,55 @@ export const VOICE_GROUPS = [
   { key: 'uk-m', label: '英音 · 男声' },
 ];
 
-// 官方 VOICES.md 里给过音质评级的几个（A / A- / B-），其余为可用音色。
-// 不做过度包装：只标「推荐」，不编造具体等级。
+// 官方 VOICES.md 的 Overall Grade（Kokoro-82M v1.0）。
+// 之前只在表里挑了几个标「★ 推荐」，结果 28 个音色看起来一样好 —— 实际官方评级从 A 到 F+
+// 都有（am_adam 是 F+，af_jessica / af_river 是 D）。评级如实带出来，用户才有依据挑，
+// 面板也才能理直气壮地只铺最好的那几个。
+export const GRADES = {
+  af_heart: 'A', af_bella: 'A-', af_nicole: 'B-', af_aoede: 'C+', af_kore: 'C+',
+  af_sarah: 'C+', af_alloy: 'C', af_nova: 'C', af_sky: 'C-', af_jessica: 'D', af_river: 'D',
+  am_michael: 'C+', am_fenrir: 'C+', am_puck: 'C+', am_echo: 'D', am_eric: 'D',
+  am_liam: 'D', am_onyx: 'D', am_santa: 'D-', am_adam: 'F+',
+  bf_emma: 'B-', bf_isabella: 'C', bf_alice: 'D', bf_lily: 'D',
+  bm_george: 'C', bm_fable: 'C', bm_lewis: 'D+', bm_daniel: 'D',
+};
+
+const GRADE_RANK = {
+  A: 0, 'A-': 1, 'B+': 2, B: 3, 'B-': 4, 'C+': 5, C: 6, 'C-': 7,
+  'D+': 8, D: 9, 'D-': 10, 'F+': 11, F: 12,
+};
+const rank = (g) => (g in GRADE_RANK ? GRADE_RANK[g] : 99);
+
 export const VOICES = [
-  ['af_heart', 'Heart', 'us-f', 1],
-  ['af_bella', 'Bella', 'us-f', 1],
-  ['af_nicole', 'Nicole', 'us-f', 1],
-  ['af_aoede', 'Aoede', 'us-f', 0],
-  ['af_kore', 'Kore', 'us-f', 0],
-  ['af_sarah', 'Sarah', 'us-f', 0],
-  ['af_alloy', 'Alloy', 'us-f', 0],
-  ['af_jessica', 'Jessica', 'us-f', 0],
-  ['af_nova', 'Nova', 'us-f', 0],
-  ['af_river', 'River', 'us-f', 0],
-  ['af_sky', 'Sky', 'us-f', 0],
-  ['am_michael', 'Michael', 'us-m', 0],
-  ['am_fenrir', 'Fenrir', 'us-m', 0],
-  ['am_puck', 'Puck', 'us-m', 0],
-  ['am_echo', 'Echo', 'us-m', 0],
-  ['am_eric', 'Eric', 'us-m', 0],
-  ['am_liam', 'Liam', 'us-m', 0],
-  ['am_onyx', 'Onyx', 'us-m', 0],
-  ['am_santa', 'Santa', 'us-m', 0],
-  ['am_adam', 'Adam', 'us-m', 0],
-  ['bf_emma', 'Emma', 'uk-f', 1],
-  ['bf_isabella', 'Isabella', 'uk-f', 0],
-  ['bf_alice', 'Alice', 'uk-f', 0],
-  ['bf_lily', 'Lily', 'uk-f', 0],
-  ['bm_george', 'George', 'uk-m', 0],
-  ['bm_fable', 'Fable', 'uk-m', 0],
-  ['bm_lewis', 'Lewis', 'uk-m', 0],
-  ['bm_daniel', 'Daniel', 'uk-m', 0],
-].map(([id, name, group, rec]) => ({ id, name, group, rec: !!rec }));
+  ['af_heart', 'Heart', 'us-f'],
+  ['af_bella', 'Bella', 'us-f'],
+  ['af_nicole', 'Nicole', 'us-f'],
+  ['af_aoede', 'Aoede', 'us-f'],
+  ['af_kore', 'Kore', 'us-f'],
+  ['af_sarah', 'Sarah', 'us-f'],
+  ['af_alloy', 'Alloy', 'us-f'],
+  ['af_jessica', 'Jessica', 'us-f'],
+  ['af_nova', 'Nova', 'us-f'],
+  ['af_river', 'River', 'us-f'],
+  ['af_sky', 'Sky', 'us-f'],
+  ['am_michael', 'Michael', 'us-m'],
+  ['am_fenrir', 'Fenrir', 'us-m'],
+  ['am_puck', 'Puck', 'us-m'],
+  ['am_echo', 'Echo', 'us-m'],
+  ['am_eric', 'Eric', 'us-m'],
+  ['am_liam', 'Liam', 'us-m'],
+  ['am_onyx', 'Onyx', 'us-m'],
+  ['am_santa', 'Santa', 'us-m'],
+  ['am_adam', 'Adam', 'us-m'],
+  ['bf_emma', 'Emma', 'uk-f'],
+  ['bf_isabella', 'Isabella', 'uk-f'],
+  ['bf_alice', 'Alice', 'uk-f'],
+  ['bf_lily', 'Lily', 'uk-f'],
+  ['bm_george', 'George', 'uk-m'],
+  ['bm_fable', 'Fable', 'uk-m'],
+  ['bm_lewis', 'Lewis', 'uk-m'],
+  ['bm_daniel', 'Daniel', 'uk-m'],
+].map(([id, name, group]) => ({ id, name, group, grade: GRADES[id] || '' }));
 
 const VOICE_IDS = new Set(VOICES.map((v) => v.id));
 
@@ -73,11 +90,22 @@ export function getVoice(id) {
   return VOICES.find((v) => v.id === id) || null;
 }
 
-/** 按分组返回音色（推荐音色排在组内最前，其余保持官方顺序） */
+/**
+ * 面板默认铺的 6 个：官方评级最高的三个女声（A / A- / B-）+ 三个男声（C+ / C+ / C），
+ * 美音英音都覆盖到。28 个全铺会让 D/F 级混在前排，用户随手挑到差的只会以为模型不行。
+ * 想听别的仍在「显示全部音色」里 —— 只是不再默认推给所有人。
+ */
+export const FEATURED_VOICE_IDS = ['af_heart', 'af_bella', 'bf_emma', 'am_michael', 'am_fenrir', 'bm_george'];
+
+export function featuredVoices() {
+  return FEATURED_VOICE_IDS.map((id) => getVoice(id)).filter(Boolean);
+}
+
+/** 按分组返回音色（组内按官方评级排序，同评级保持官方顺序） */
 export function voicesByGroup() {
   return VOICE_GROUPS.map((g) => ({
     ...g,
-    voices: VOICES.filter((v) => v.group === g.key).sort((a, b) => b.rec - a.rec),
+    voices: VOICES.filter((v) => v.group === g.key).sort((a, b) => rank(a.grade) - rank(b.grade)),
   }));
 }
 

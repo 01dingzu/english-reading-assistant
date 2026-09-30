@@ -5,9 +5,9 @@ import { lookup, inVocab, refreshVocabCache } from './dict.js';
 import { translateSentence } from './translate.js';
 import {
   Speaker, speakOnce, loadSettings, saveSettings, getSettings,
-  listVoices, resolveVoice, hasAiVoice, hasCloudVoice, isDegraded, ready as ttsReady,
+  resolveVoice, hasAiVoice, hasCloudVoice, isDegraded, ready as ttsReady,
   preferKokoro, preferCloud, hasKokoroVoice, kokoroUsable, engineLabel, isKokoroBroken,
-  kokoroInfo, kokoroVoicesByGroup, ensureKokoro, warmKokoro, onKokoroProgress,
+  kokoroInfo, voiceCatalog, voiceCount, audition, ensureKokoro, warmKokoro, onKokoroProgress,
   KOKORO_DTYPES, KOKORO_DEFAULT_VOICE,
 } from './tts.js';
 
@@ -462,34 +462,8 @@ function openTtsSettings() {
   // 本地神经语音（Kokoro-82M）：需要用户点一下才下载，属于可选能力
   body.append(kokoroBlock());
 
-  // 音色
-  const voices = listVoices();
-  const voiceBox = el('div', { class: 'tts-voices', id: 'tts-voices' });
-  if (!voices.length) {
-    voiceBox.append(el('div', { class: 'tts-empty' }, '没有可用音色'));
-  } else {
-    let lastTier = 0;
-    for (const v of voices) {
-      if (v.tier !== lastTier) {
-        lastTier = v.tier;
-        voiceBox.append(el('div', { class: 'tts-group' }, v.tierLabel));
-      }
-      const on = s.voiceName ? s.voiceName === v.name : resolveVoice()?.name === v.name;
-      voiceBox.append(el('div', {
-        class: 'tts-voice' + (on ? ' on' : ''),
-        'data-voice': v.name,
-        onclick: async () => {
-          await saveSettings({ voiceName: v.name });
-          updateTtsBar();
-          openTtsSettings();
-        },
-      },
-        el('span', { class: 'tts-voice-name' }, v.name),
-        el('span', { class: 'tts-voice-lang' }, v.lang),
-      ));
-    }
-  }
-  body.append(el('div', { class: 'tts-row' }, el('div', { class: 'tts-label' }, '浏览器内置音色'), voiceBox));
+  // 音色：本地 AI 与浏览器音色合并成一张表，默认只铺精选
+  body.append(voiceBlock());
 
   // 语速
   const rateVal = el('span', { class: 'tts-rate-val', id: 'tts-rate-val' }, String(s.rate));
@@ -557,6 +531,90 @@ function openTtsSettings() {
   }
 
   openSheet(true);
+}
+
+// ---------- 音色选择 ----------
+// 默认只铺精选 6 个（本地模型就绪时是官方评级最高的 3 女 3 男）。
+// 28 个音色里近一半是官方 D/F 级，全铺出来只会让人以为本地 AI 音色不好听；
+// 想挑别的仍在「显示全部音色」里，只是不再默认推给所有人。
+let showAllVoices = false;
+
+/** 试听例句：得够长才听得出语调，太短只能听出音色 */
+const AUDITION_TEXT = 'Reading opens a door that no one can close.';
+
+function voiceBlock() {
+  const s = getSettings();
+  const row = el('div', { class: 'tts-row' }, el('div', { class: 'tts-label' }, '音色'));
+  const box = el('div', { class: 'tts-voices' + (showAllVoices ? ' all' : ''), id: 'tts-voices' });
+
+  const kokoroOn = preferKokoro();
+  const cloudOn = preferCloud();
+  const curK = s.kokoro.voice || KOKORO_DEFAULT_VOICE;
+  const cur = resolveVoice();
+  const curB = cur ? cur.name : '';
+  const groups = voiceCatalog({ all: showAllVoices });
+
+  if (!groups.length) box.append(el('div', { class: 'tts-empty' }, '没有可用音色'));
+  for (const g of groups) {
+    if (g.label) box.append(el('div', { class: 'tts-group' }, g.label));
+    for (const it of g.items) {
+      const on = it.kind === 'kokoro'
+        ? (kokoroOn && it.id === curK)
+        : (!kokoroOn && !cloudOn && it.id === curB);
+      box.append(el('div', {
+        class: 'tts-voice' + (on ? ' on' : ''),
+        [it.kind === 'kokoro' ? 'data-kvoice' : 'data-voice']: it.id,
+        title: it.kind === 'kokoro' ? `${it.name} · ${it.id}` : it.id,
+        onclick: () => pickVoice(it),
+      },
+        el('span', { class: 'tts-voice-name' }, it.name),
+        el('span', { class: 'tts-voice-side' },
+          it.grade ? el('span', { class: 'tts-grade', title: '官方音质评级' }, it.grade) : null,
+          el('span', { class: 'tts-voice-lang' }, it.right),
+          el('button', {
+            class: 'tts-audition', 'data-audition': it.id, title: '试听这个音色',
+            onclick: (e) => { e.stopPropagation(); auditionVoice(it, e.currentTarget); },
+          }, '▶'),
+        ),
+      ));
+    }
+  }
+  row.append(box);
+
+  const total = voiceCount();
+  if (total > (groups[0] ? groups[0].items.length : 0)) {
+    row.append(el('button', {
+      class: 'tts-voices-toggle', id: 'tts-voices-toggle',
+      onclick: () => { showAllVoices = !showAllVoices; openTtsSettings(); },
+    }, showAllVoices ? '收起，只看精选 6 个' : `显示全部音色（共 ${total} 个）`));
+  }
+  if (!kokoroInfo().ready) {
+    row.append(el('p', { class: 'tts-note tts-voice-hint' },
+      '启用上面的「本地 AI 音色」后，这里会换成官方评级最高的 6 个（离线可用、不耗流量）。'));
+  }
+  return row;
+}
+
+async function pickVoice(it) {
+  const now = getSettings();
+  if (it.kind === 'kokoro') {
+    // 能列出来就说明模型已在内存里（见 voiceCatalog），所以这里是零下载的启用
+    const patch = { kokoro: { voice: it.id, enabled: true } };
+    if (now.engine === 'system' || now.engine === 'cloud') patch.engine = 'kokoro';
+    await saveSettings(patch);
+  } else {
+    // 明确点了浏览器音色 → 引擎切到「仅本机音色」。
+    // 不切的话，engine 还是 auto 时本地模型会继续抢着读，用户会觉得「点了没反应」。
+    await saveSettings({ voiceName: it.id, engine: 'system' });
+  }
+  updateTtsBar();
+  openTtsSettings();
+}
+
+function auditionVoice(it, btn) {
+  if (btn) { btn.disabled = true; btn.textContent = '…'; }
+  const done = () => { if (btn && btn.isConnected) { btn.disabled = false; btn.textContent = '▶'; } };
+  audition(it, AUDITION_TEXT, { onError: (m) => toast(m, 3400) }).then(done, done);
 }
 
 // ---------- 本地 AI 音色（Kokoro-82M）----------
@@ -649,7 +707,9 @@ function kokoroBlock() {
   if (!info.ready) {
     // 两句写成两个 p：el() 的多个子串是相邻文本节点，同一行会被连在一起读
     box.append(el('p', { class: 'tts-note' },
-      '在浏览器里直接跑，28 个音色（美音 / 英音、男声 / 女声），免费、无需 Key；下载一次之后朗读不再联网。'));
+      '在浏览器里直接跑，共 28 个音色（美音 / 英音、男声 / 女声），免费、无需 Key；下载一次之后朗读不再联网。'));
+    box.append(el('p', { class: 'tts-note' },
+      '下方「音色」默认只列官方评级最高的 6 个，其余在「显示全部音色」里。'));
     box.append(el('p', { class: 'tts-note' },
       `首次启用需联网下载${KOKORO_DTYPES[s.kokoro.model] || KOKORO_DTYPES.q8}模型（看网速，通常 1 分钟内）；模型进浏览器缓存，不会重复下载。`));
     box.append(el('button', {
@@ -660,31 +720,8 @@ function kokoroBlock() {
     return box;
   }
 
-  // 已就绪 → 28 个音色（分组展示，避免和浏览器音色混在一起）
-  const cur = s.kokoro.voice || KOKORO_DEFAULT_VOICE;
-  const grid = el('div', { class: 'tts-voices kk-voices', id: 'kk-voices' });
-  for (const g of kokoroVoicesByGroup()) {
-    grid.append(el('div', { class: 'tts-group' }, `${g.label} · ${g.voices.length}`));
-    for (const v of g.voices) {
-      grid.append(el('div', {
-        class: 'tts-voice' + (v.id === cur ? ' on' : ''),
-        'data-kvoice': v.id,
-        onclick: async () => {
-          const now = getSettings();
-          await saveSettings({
-            kokoro: { voice: v.id },
-            engine: now.engine === 'system' ? 'kokoro' : now.engine,
-          });
-          updateTtsBar();
-          openTtsSettings();
-        },
-      },
-        el('span', { class: 'tts-voice-name' }, v.name + (v.rec ? ' ★' : '')),
-        el('span', { class: 'tts-voice-lang' }, v.id),
-      ));
-    }
-  }
-  box.append(grid);
+  // 已就绪 → 音色选择统一到下面的「音色」一张表里（默认已经是本地音色），
+  // 这个区块只管引擎本身的开关。
   const on = preferKokoro();
   const enabled = !!s.kokoro.enabled;
   box.append(el('div', { class: 'kk-actions' },

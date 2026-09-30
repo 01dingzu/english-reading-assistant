@@ -18,6 +18,7 @@ import {
   synthesize as kokoroSynth, prefetch as kokoroPrefetch,
   isReady as kokoroReady, isSupported as kokoroSupported, status as kokoroState,
   DEFAULT_VOICE as KOKORO_DEFAULT_VOICE,
+  VOICES as kkVoices, voicesByGroup as kkVoicesByGroup, featuredVoices as kkFeatured,
 } from './kokoro.js';
 
 // 让上层（reader.js）只 import tts.js 就能管全语音层
@@ -293,6 +294,74 @@ export function ready(timeout = 3000) {
   });
 }
 
+// ---------- 音色候选（设置面板的唯一数据源）----------
+// 面板以前是两张并排的列表：浏览器内置音色一张、本地 AI 音色 28 个一张。
+// 同一个「挑个声音」的动作被拆到两处，用户还得先想清楚该去哪张表里找。
+// 现在合并成一张：默认只铺精选 6 个，其余收进「显示全部音色」。
+
+const KK_ACCENT = { 'us-f': '美音女', 'us-m': '美音男', 'uk-f': '英音女', 'uk-m': '英音男' };
+const FEATURED_MAX = 6;      // 精选表最多几行
+
+function kokoroItem(v) {
+  return {
+    kind: 'kokoro', id: v.id, name: v.name, grade: v.grade || '',
+    right: KK_ACCENT[v.group] || v.group,
+  };
+}
+
+function browserItem(v) {
+  return {
+    kind: 'browser', id: v.name, grade: '',
+    // 前缀一长串，真正区分音色的只有后半截（Edge 下每个都是 Microsoft XXX Online (Natural) - …）
+    name: v.name.replace(/^Microsoft\s+/i, ''),
+    right: v.lang,
+  };
+}
+
+/** 可列出的音色总数（本地模型就绪时含它的 28 个）—— 折叠按钮要显示这个数 */
+export function voiceCount() {
+  return (kokoroReady() ? kkVoices.length : 0) + listVoices().length;
+}
+
+/**
+ * 音色候选表。all=false 只给精选（本地模型就绪时是官方评级最高的 3 女 3 男，
+ * 否则是本机可用的前 6 个）；all=true 给全部 —— 本地按美英音 / 男女分组、浏览器按档位分组。
+ */
+export function voiceCatalog({ all = false } = {}) {
+  const groups = [];
+
+  if (!all) {
+    // 本地模型的音色只在「模型已经加载进内存」时才列出来：没加载时点了也读不出声，
+    // 列出来等于暗示下载是自动的（本站不偷偷下 88MB）。
+    const items = kokoroReady()
+      ? kkFeatured().map(kokoroItem)
+      : listVoices().slice(0, FEATURED_MAX).map(browserItem);
+    if (items.length) {
+      groups.push({
+        label: kokoroReady() ? '精选音色 · 官方评级最高的 3 女 3 男' : '精选音色 · 本机可用的最佳 6 个',
+        items,
+      });
+    }
+    return groups;
+  }
+
+  if (kokoroReady()) {
+    for (const g of kkVoicesByGroup()) {
+      groups.push({ label: `本地 AI · ${g.label}（${g.voices.length}）`, items: g.voices.map(kokoroItem) });
+    }
+  }
+  const byTier = new Map();
+  for (const v of listVoices()) {
+    if (!byTier.has(v.tier)) byTier.set(v.tier, []);
+    byTier.get(v.tier).push(v);
+  }
+  for (const tier of [...byTier.keys()].sort((a, b) => a - b)) {
+    const list = byTier.get(tier);
+    groups.push({ label: `浏览器内置 · ${TIER_LABEL[tier]}（${list.length}）`, items: list.map(browserItem) });
+  }
+  return groups;
+}
+
 // ---------- 播放器 ----------
 
 /**
@@ -311,6 +380,10 @@ export class Speaker {
     this.onindex = null;
     this.onerror = null;
     this.onend = null;
+    // 以下三个只给「试听」用：试听是跨引擎点名一个音色，读完即弃。
+    this.transient = false;     // 一次性：失败只报这一句，不熔断引擎、不动全局状态
+    this.forceRoute = null;     // 'kokoro' | 'browser'：绕开按引擎优先级自动选路
+    this.voiceOverride = null;  // 指定音色（本地模型 id / 浏览器音色名），不读用户设置
   }
 
   get current() { return this.items[this.index] || null; }
@@ -415,7 +488,12 @@ export class Speaker {
       let route = 'browser';
       let again = false;        // 出错后是否停在原地把这一句重读
       try {
-        if (preferKokoro()) {
+        if (this.forceRoute) {
+          // 试听：点了哪个音色就试哪个，不走「按引擎优先级自动选路」
+          route = this.forceRoute;
+          if (route === 'kokoro') await this._speakKokoro(item.text);
+          else await this._speakBrowser(item.text);
+        } else if (preferKokoro()) {
           route = 'kokoro';
           await this._speakKokoro(item.text);
         } else if (preferCloud()) {
@@ -427,6 +505,12 @@ export class Speaker {
       } catch (e) {
         if (my !== this.token) return;
         const msg = String((e && e.message) || e);
+        if (this.transient) {
+          // 试听就只有这一句：说清楚然后收尾。绝不能把失败记到引擎头上 ——
+          // 某个音色的权重没下下来，不代表整个本地模型不可用。
+          if (this.onerror) this.onerror(`试听失败：${msg}`);
+          break;
+        }
         if (route === 'kokoro' && e && e.stage === 'play') {
           // 只是这一句放不出来（设备被拔 / 媒体元素僵死）→ 跳过继续；重试多半还是放不出来
           if (this.onerror) this.onerror(`这一句没能播放（${msg}），已跳到下一句`);
@@ -501,7 +585,7 @@ export class Speaker {
         reject(new Error('当前浏览器不支持朗读'));
         return;
       }
-      const v = resolveVoice();
+      const v = (this.voiceOverride && findVoice(this.voiceOverride)) || resolveVoice();
       const u = new SpeechSynthesisUtterance(text);
       if (v) {
         u.lang = v.lang;
@@ -566,7 +650,7 @@ export class Speaker {
 
   /** 本地神经语音：浏览器内推理 → WAV → 播放 */
   async _speakKokoro(text) {
-    const voice = settings.kokoro.voice || KOKORO_DEFAULT_VOICE;
+    const voice = this.voiceOverride || settings.kokoro.voice || KOKORO_DEFAULT_VOICE;
     const speed = Math.min(1.5, Math.max(0.6, Number(settings.rate) || 1));
     let clip;
     try {
@@ -638,6 +722,11 @@ function findRawVoice(name) {
   } catch (e) { return null; }
 }
 
+/** 按名字取归一化音色（试听指定音色时用） */
+function findVoice(name) {
+  return allVoices().find(v => v.name === name) || null;
+}
+
 /** 单句朗读（点词、闪卡、复习用）：不干扰跟读播放器，只让它就地暂停 */
 export function speakOnce(text, { rate, onError } = {}) {
   if (activeSpeaker && activeSpeaker.state === 'playing') activeSpeaker.pause();
@@ -667,4 +756,23 @@ export function speakOnce(text, { rate, onError } = {}) {
   } catch (e) {
     return false;
   }
+}
+
+let auditionSpk = null;
+
+/**
+ * 试听指定音色：不写设置、不改当前选择。
+ * 挑音色总得先听一下 —— 光看名字（Heart / Fenrir / George）根本判断不出哪个适合自己。
+ */
+export function audition(item, text, { onError } = {}) {
+  if (auditionSpk) auditionSpk.stop();                     // 连点多个音色时只留最后一个在响
+  if (activeSpeaker && activeSpeaker.state === 'playing') activeSpeaker.pause();
+  const sp = new Speaker();
+  sp.transient = true;                                     // 一次性：失败不熔断整个引擎
+  sp.voiceOverride = item.id;
+  sp.forceRoute = item.kind === 'kokoro' ? 'kokoro' : 'browser';
+  sp.onerror = (m) => { if (onError) onError(m); };
+  sp.setItems([{ text, node: null }]);
+  auditionSpk = sp;
+  return sp.play(0).catch(() => { /* 失败已由 onerror 说明 */ });
 }

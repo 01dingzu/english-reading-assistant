@@ -29,7 +29,8 @@
 | 云端音色 | `Microsoft * Online`、`Google US English` | 浏览器自带的云端合成 |
 | 本机音色 | `Microsoft Zira / Huihui` 等 | 完全离线，机械音 |
 
-- **本地 AI 音色（Kokoro-82M）**：在「语音设置 → 本地 AI 音色」点「下载并启用」即可。模型是 [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX)（Apache-2.0，8200 万参数，24kHz），WebGPU 优先、没有则退 WebAssembly。28 个音色分四组：美音 11 女 / 9 男、英音 4 女 / 4 男；官方评级最高的 `af_heart`（A）、`af_bella`（A-）、`af_nicole`（B-）、`bf_emma`（B-）在面板里标 ★。
+- **本地 AI 音色（Kokoro-82M）**：在「语音设置 → 本地 AI 音色」点「下载并启用」即可。模型是 [Kokoro-82M](https://huggingface.co/onnx-community/Kokoro-82M-v1.0-ONNX)（Apache-2.0，8200 万参数，24kHz），WebGPU 优先、没有则退 WebAssembly。共 28 个音色，分四组：美音 11 女 / 9 男、英音 4 女 / 4 男。
+- **音色只默认给最好的 6 个**：28 个里近一半是官方 D/F 级（`am_adam` 是 F+），全铺出来只会让人误判「本地 AI 音色不好听」。面板默认列官方 Overall Grade 最高的 3 女 3 男 —— `af_heart`（A）、`af_bella`（A-）、`bf_emma`（B-）、`am_michael`（C+）、`am_fenrir`（C+）、`bm_george`（C），每行带评级徽标和单独的 ▶ 试听；其余在「显示全部音色」里，一个都没删。本机/神经音色与本地音色在**同一张表**里排序，模型没就绪时这张表自动退到本机最好的 6 个。
 - 模型**只在你点按钮后下载**，进浏览器缓存（CacheStorage），之后合成完全在本机进行、不再联网，也不用重新下载。跟读时会**边播边合成下一句**，句间基本无空档。
 - **Edge 上有 AI 神经音色，Chrome 没有**（Chrome 只给 Google 的机械音）。不想下载模型就用 Edge 打开本站。
 - 也可以接自己的 AI 语音：「语音设置 → 自备 AI 语音」填 OpenAI 兼容接口（如 `/v1/audio/speech`），Key 只存本机 IndexedDB，**不会上传到任何地方**——本站没有后端。接口必须是 HTTPS 公网地址（浏览器会拦截网页访问本地/明文接口）。

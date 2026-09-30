@@ -40,7 +40,7 @@ function installMock() {
           cb({ status: 'done', file: 'model_q8.onnx', total: 80 * 1048576 });
         }
         return {
-          voices: Object.fromEntries(['af_heart', 'af_bella', 'af_nicole', 'am_michael', 'bf_emma']
+          voices: Object.fromEntries(['af_heart', 'af_bella', 'af_nicole', 'am_michael', 'bf_emma', 'am_fenrir', 'bm_george']
             .map((v) => [v, {}])),
           generate: async (text, { voice, speed }) => {
             window.__kk.calls.push({ text, voice, speed });
@@ -106,6 +106,7 @@ const meta = await js(async () => {
     count: tts.KOKORO_VOICES.length,
     groups: groups.map((g) => ({ key: g.key, n: g.voices.length, first: g.voices[0].id })),
     ids: tts.KOKORO_VOICES.map((v) => v.id),
+    grades: tts.KOKORO_VOICES.map((v) => v.grade),
     device: tts.kokoroDevice(),
     dtypes: Object.keys(tts.KOKORO_DTYPES),
     loads: window.__kk.loads,
@@ -118,9 +119,12 @@ t('内置 28 个音色', meta.count === 28, String(meta.count));
 t('分组为 美音 11 女 / 9 男、英音 4 女 / 4 男',
   JSON.stringify(meta.groups.map((g) => g.n)) === JSON.stringify([11, 9, 4, 4]),
   JSON.stringify(meta.groups));
-t('推荐音色排在各组首位（af_heart / bf_emma）',
+t('官方评级最高的排在各组首位（af_heart / bf_emma）',
   meta.groups[0].first === 'af_heart' && meta.groups[2].first === 'bf_emma',
   JSON.stringify(meta.groups.map((g) => g.first)));
+t('28 个音色都带官方评级（缺一个就说明评级表的 id 写错了）',
+  meta.grades.length === 28 && meta.grades.every((g) => g),
+  meta.grades.filter((g) => !g).join(',') || '全部有评级');
 t('音色 id 前缀与分组一致（11+9+4+4）',
   meta.ids.filter((id) => id.startsWith('af_')).length === 11
   && meta.ids.filter((id) => id.startsWith('am_')).length === 9
@@ -406,8 +410,12 @@ const panel = await js(() => ({
   hasBlock: !!document.querySelector('#tts-kokoro'),
   blockLabel: document.querySelector('#tts-kokoro .tts-label')?.textContent || '',
   status: document.querySelector('#kk-status')?.textContent || '',
-  voices: document.querySelectorAll('#kk-voices .tts-voice').length,
-  groups: [...document.querySelectorAll('#kk-voices .tts-group')].map((g) => g.textContent),
+  // 音色选择：本地 AI 与浏览器已合并成一张表，默认只铺精选
+  voices: document.querySelectorAll('#tts-voices .tts-voice').length,
+  kids: [...document.querySelectorAll('#tts-voices .tts-voice')].map((n) => n.dataset.kvoice || n.dataset.voice),
+  grades: [...document.querySelectorAll('#tts-voices .tts-grade')].map((g) => g.textContent),
+  auditions: document.querySelectorAll('#tts-voices .tts-audition').length,
+  toggle: document.querySelector('#tts-voices-toggle')?.textContent || '',
   hasPreview: !!document.querySelector('#kk-preview'),
   hasToggle: !!document.querySelector('#kk-toggle'),
 }));
@@ -415,13 +423,19 @@ t('引擎多了「仅本地 AI 音色」一项',
   JSON.stringify(panel.chips) === JSON.stringify(['auto', 'kokoro', 'system', 'cloud']), JSON.stringify(panel.chips));
 t('设置面板有独立的本地 AI 音色区块', panel.hasBlock && /Kokoro/.test(panel.blockLabel), panel.blockLabel);
 t('已就绪状态如实展示设备', /已就绪/.test(panel.status), panel.status);
-t('展开 28 个音色、按 4 组展示',
-  panel.voices === 28 && panel.groups.length === 4, `${panel.voices} 个 / ${panel.groups.join('、')}`);
 t('提供试听与启用开关', panel.hasPreview && panel.hasToggle);
+t('音色表默认只铺 6 个（不再一次列 28 个）', panel.voices === 6, `${panel.voices} 个`);
+t('精选 6 个 = 官方评级最高的 3 女 3 男',
+  panel.kids.join(',') === 'af_heart,af_bella,bf_emma,am_michael,am_fenrir,bm_george', panel.kids.join(','));
+t('每个音色带官方评级徽标（A / A- / B- / C+ / C+ / C）',
+  panel.grades.join(',') === 'A,A-,B-,C+,C+,C', panel.grades.join(','));
+t('每行都能单独试听', panel.auditions === panel.voices, `${panel.auditions} 个试听按钮`);
+t('其余音色没被删掉，收在「显示全部音色」里',
+  /显示全部音色（共 \d+ 个）/.test(panel.toggle), panel.toggle);
 
 // 换音色 → 落库 → 控制条同步
 await js(() => {
-  [...document.querySelectorAll('#kk-voices .tts-voice')].find((n) => n.dataset.kvoice === 'am_michael').click();
+  [...document.querySelectorAll('#tts-voices .tts-voice')].find((n) => n.dataset.kvoice === 'am_michael').click();
 });
 await sleep(700);
 const picked = await js(async () => (await import('./js/tts.js')).getSettings().kokoro.voice);
@@ -430,6 +444,31 @@ const pickedVoice = await js(() => document.querySelector('#sheet-body .tts-acti
 t('面板「当前音色」同步为新音色', /am_michael/.test(pickedVoice), pickedVoice);
 const barLabel = await js(() => document.querySelector('#tts-voice')?.textContent || '');
 t('跟读控制条同步显示本地 AI 音色', /本地 AI · am_michael/.test(barLabel), barLabel);
+
+// 单条试听：点 ▶ 要真的用那个音色合成，且不能顺手改掉当前选择
+await js(() => document.querySelector('#tts-voices [data-audition="af_bella"]').click());
+await sleep(1800);
+const aud = await js(async () => {
+  const tts = await import('./js/tts.js');
+  return { calls: window.__kk.calls.map((c) => c.voice), cur: tts.getSettings().kokoro.voice };
+});
+t('试听用的是被点的那个音色（af_bella）', aud.calls.includes('af_bella'), aud.calls.join(','));
+t('试听不改动当前音色设置（仍是 am_michael）', aud.cur === 'am_michael', aud.cur);
+
+// 展开「显示全部音色」→ 28 个本地音色按 4 组回来
+await js(() => document.querySelector('#tts-voices-toggle').click());
+await sleep(500);
+const expanded = await js(() => ({
+  kk: document.querySelectorAll('#tts-voices [data-kvoice]').length,
+  groupLabels: [...document.querySelectorAll('#tts-voices .tts-group')].map((g) => g.textContent),
+  toggle: document.querySelector('#tts-voices-toggle')?.textContent || '',
+}));
+const localGroups = expanded.groupLabels.filter((g) => /本地 AI/.test(g));
+t('展开后 28 个本地音色全在（美英音 / 男女 4 组）',
+  expanded.kk === 28 && localGroups.length === 4, `${expanded.kk} 个 / ${localGroups.join('、')}`);
+t('展开后可以再收起', /收起/.test(expanded.toggle), expanded.toggle);
+await js(() => document.querySelector('#tts-voices-toggle').click());
+await sleep(400);
 
 // ---------- I. 持久化与刷新恢复 ----------
 await js(() => document.querySelector('#sheet-backdrop').click());
@@ -483,10 +522,16 @@ const fresh = await js(() => ({
   btn: document.querySelector('#kk-download')?.textContent || '',
   progressHidden: document.querySelector('#kk-progress')?.hidden,
   note: [...document.querySelectorAll('#tts-kokoro .tts-note')].map((p) => p.textContent).join(' '),
-  voices: document.querySelectorAll('#kk-voices .tts-voice').length,
+  // 注意别用 `#tts-voices .tts-voice` 判空：那张表在模型没就绪时会退到浏览器音色，
+  // 行数不为 0。要判的是「有没有本地模型的音色」。
+  kkVoices: document.querySelectorAll('#tts-voices [data-kvoice]').length,
+  rows: document.querySelectorAll('#tts-voices .tts-voice').length,
+  hint: document.querySelector('.tts-voice-hint')?.textContent || '',
 }));
-t('新用户看到「未启用 + 下载入口」而不是音色列表',
-  /未启用/.test(fresh.ready) && fresh.btn.includes('下载并启用') && fresh.voices === 0, JSON.stringify(fresh));
+t('新用户看到「未启用 + 下载入口」而不是本地音色列表',
+  /未启用/.test(fresh.ready) && fresh.btn.includes('下载并启用') && fresh.kkVoices === 0, JSON.stringify(fresh));
+t('模型没就绪时精选表退到本机音色，并说明启用后能拿到更好的 6 个',
+  fresh.rows > 0 && /官方评级最高的 6 个/.test(fresh.hint), `${fresh.rows} 行 / ${fresh.hint.slice(0, 36)}`);
 t('下载前说明体积与「不再联网」', /88 MB|88MB/.test(fresh.note) && /不再联网|离线/.test(fresh.note), fresh.note.slice(0, 60));
 t('未下载时不显示进度条', fresh.progressHidden === true);
 
@@ -510,13 +555,13 @@ const afterDl = await js(async () => {
     warm: tts.getSettings().kokoro.warm,
     prefer: tts.preferKokoro(),
     status: document.querySelector('#kk-status')?.textContent || '',
-    voices: document.querySelectorAll('#kk-voices .tts-voice').length,
+    kkVoices: document.querySelectorAll('#tts-voices [data-kvoice]').length,
   };
 });
 t('下载完成即启用（并记住已成功加载过）',
   afterDl.enabled === true && afterDl.warm === true && afterDl.prefer === true, JSON.stringify(afterDl));
-t('下载完成后就地渲染 28 个音色',
-  afterDl.voices === 28 && /已就绪/.test(afterDl.status), `${afterDl.voices} 个 / ${afterDl.status}`);
+t('下载完成后精选表就地换成 6 个本地音色',
+  afterDl.kkVoices === 6 && /已就绪/.test(afterDl.status), `${afterDl.kkVoices} 个 / ${afterDl.status}`);
 
 // ---------- K. 边界 ----------
 t('全程没有向 CDN / HuggingFace 发请求（注入生效，未真下载）', offsite.length === 0,

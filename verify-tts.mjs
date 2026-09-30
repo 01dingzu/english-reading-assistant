@@ -294,14 +294,17 @@ const panel = await page.evaluate(() => ({
   hasRate: !!document.querySelector('#tts-rate'),
   hasAuto: !!document.querySelector('#tts-autoscroll'),
   hasPreview: !!document.querySelector('#tts-preview'),
-  tip: document.querySelector('#sheet-body .tts-tip')?.textContent || '',
+  auditions: document.querySelectorAll('#tts-voices .tts-audition').length,
+  tips: [...document.querySelectorAll('#sheet-body .tts-tip')].map((n) => n.textContent).join(' '),
 }));
 t('语音设置面板可打开', panel.open && panel.title === '语音设置', panel.title);
 t('四种引擎可选（自动 / 本地 AI / 仅本机 / 自备 AI）', JSON.stringify(panel.chips) === JSON.stringify(['auto', 'kokoro', 'system', 'cloud']), JSON.stringify(panel.chips));
-t('音色列表按档位分组展示', panel.groups.length >= 1 && panel.voices > 0, `${panel.voices} 个 / 组:${panel.groups.join('、')}`);
+t('音色表默认走精选（最多 6 个，不再一次列完全部）',
+  panel.voices > 0 && panel.voices <= 6 && panel.groups.length >= 1, `${panel.voices} 个 / 组:${panel.groups.join('、')}`);
+t('每个音色都能单独试听', panel.auditions === panel.voices, `${panel.auditions}/${panel.voices}`);
 t('有语速滑块 / 自动滚动开关 / 试听', panel.hasRate && panel.hasAuto && panel.hasPreview);
-if (neural) t('有 AI 音色时给出「已检测到」提示', panel.tip.includes('已检测到 AI 神经音色'), panel.tip.slice(0, 40));
-else t('无 AI 音色时给出降级提示（引导用 Edge 或配 Key）', panel.tip.includes('机械音色'), panel.tip.slice(0, 40));
+if (neural) t('有 AI 音色时给出「已检测到」提示', panel.tips.includes('已检测到 AI 神经音色'), panel.tips.slice(0, 40));
+else t('无 AI 音色时给出降级提示（引导用 Edge 或配 Key）', panel.tips.includes('机械音色'), panel.tips.slice(0, 40));
 
 // 切语速 → 落库
 await page.evaluate(() => {
