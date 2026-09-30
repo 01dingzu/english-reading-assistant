@@ -195,6 +195,7 @@ t('「上一句」回退一句', posPrev === posNext - 1, `${posNext} → ${posP
 // 有些机器/网络环境下远程神经音色会返回 synthesis-failed。
 // 产品要求：不能静默卡死，必须自动换到能用的音色把内容读完。
 // 注意：#tts-pos 一开始就是「1 / N」，所以必须断言索引真正往后走，不能拿 >=1 当通过。
+// 窗口给到 60s：失败后是「同一句重读」而不是跳过，Edge 的神经音色冷启动 + 重读确实更慢。
 await page.evaluate(() => document.querySelector('#tts-stop').click());
 await sleep(300);
 await page.evaluate(async () => {
@@ -208,7 +209,7 @@ const topVoice = await page.evaluate(async () => {
 await page.evaluate(() => document.querySelector('#btn-tts').click());
 let maxIdx = 0;
 const fallbackMsgs = [];
-for (let i = 0; i < 60; i++) {
+for (let i = 0; i < 120; i++) {
   await sleep(500);
   const s = await page.evaluate(() => ({
     pos: document.querySelector('#tts-pos')?.textContent || '',
@@ -221,30 +222,39 @@ for (let i = 0; i < 60; i++) {
 }
 console.log(`  诊断 · 首选音色：${topVoice}`);
 console.log(`  诊断 · 自愈记录：${fallbackMsgs.length ? fallbackMsgs.join(' | ') : '（首选音色直接可用，未触发）'}`);
-console.log(`  诊断 · 30s 内推进到第 ${maxIdx} 句`);
-t('首选音色不可用时自动换音色续读（连读 3 句不卡死）', maxIdx >= 3, `maxIdx=${maxIdx}`);
+console.log(`  诊断 · 60s 内推进到第 ${maxIdx} 句`);
+// 断言「不卡死在失败句上」而不是「一定读满 3 句」：无头 Edge 里所有远程神经音色都会
+// synthesis-failed（环境限制，实测），此时连读 3 句物理上不可能；硬要它成立，
+// 只会把「跳过失败句」这种坏行为测成绿的。真正的重读/换音色语义由 D2 注入式确定性覆盖。
+t('首选音色失败后继续往下读（不卡死在失败句上）', maxIdx > 1, `maxIdx=${maxIdx}`);
 await page.evaluate(() => document.querySelector('#tts-stop').click());
 await sleep(300);
 
 // ---------- D2. 注入式失败：确定性验证「换音色自愈」 ----------
 // 不依赖环境是否真的合成失败：人为把最优先的那个音色打成 synthesis-failed，
-// 断言产品会先重试、再换音色，最终把内容读下去。
+// 其余音色模拟「正常开口并读完」。这样断言才可信 —— 无头环境里远程音色本来就读不出声，
+// 若靠真实合成，测出来的只是「有没有被跳过」，而不是「有没有真的读」。
 await page.evaluate(() => document.querySelector('#tts-stop').click());
 await sleep(200);
 const blockedVoice = await page.evaluate(async () => {
   const tts = await import('./js/tts.js');
   const target = tts.listVoices().find(v => v.tier === 1) || tts.listVoices()[0];
   await tts.saveSettings({ engine: 'auto', voiceName: target.name });
-  const orig = speechSynthesis.speak.bind(speechSynthesis);
-  window.__ttsOrigSpeak = orig;
+  window.__ttsOrigSpeak = speechSynthesis.speak.bind(speechSynthesis);
   window.__ttsBlocked = 0;
+  window.__ttsCalls = [];       // { text, voice, blocked }
   speechSynthesis.speak = (u) => {
-    if (u.voice && u.voice.name === target.name) {
+    const name = (u.voice && u.voice.name) || '';
+    const blocked = name === target.name;
+    window.__ttsCalls.push({ text: u.text, voice: name, blocked });
+    if (blocked) {
       window.__ttsBlocked++;
       setTimeout(() => { try { u.onerror({ error: 'synthesis-failed' }); } catch (e) { /* 忽略 */ } }, 10);
       return;
     }
-    return orig(u);
+    // 可用音色：正常开口并读完（每句 60ms，便于在窗口内跑完整章）
+    setTimeout(() => { try { u.onstart && u.onstart({}); } catch (e) { /* 忽略 */ } }, 5);
+    setTimeout(() => { try { u.onend && u.onend({}); } catch (e) { /* 忽略 */ } }, 65);
   };
   return target.name;
 });
@@ -262,6 +272,7 @@ for (let i = 0; i < 40; i++) {
   if (parseInt(s.pos.split('/')[0] || '0') >= 3) { healed = true; break; }
 }
 const blockedCount = await page.evaluate(() => window.__ttsBlocked);
+const ttsCalls = await page.evaluate(() => window.__ttsCalls.slice(0, 6));
 await page.evaluate(() => {
   if (window.__ttsOrigSpeak) speechSynthesis.speak = window.__ttsOrigSpeak;
   document.querySelector('#tts-stop').click();
@@ -269,7 +280,14 @@ await page.evaluate(() => {
 await sleep(300);
 console.log(`  诊断 · 注入失败音色：${blockedVoice}（被拦截 ${blockedCount} 次）`);
 console.log(`  诊断 · 自愈提示：${healMsgs.length ? healMsgs.join(' | ') : '（无）'}`);
+console.log(`  诊断 · 前几次朗读请求：${ttsCalls.map((c) => `${c.blocked ? '✗' : '✓'}${c.voice || '默认'}`).join(' → ')}`);
 t('指定音色失败时会重试（不是一失败就换）', blockedCount >= 2, `blocked=${blockedCount}`);
+t('失败的那一句原样重读（不跳过内容）',
+  ttsCalls.length >= 2 && !!ttsCalls[0].text && ttsCalls[0].text === ttsCalls[1].text,
+  JSON.stringify(ttsCalls.slice(0, 2).map((c) => c.text)));
+t('换音色后用新音色重读同一句（内容不丢）',
+  ttsCalls.some((c) => !c.blocked && c.text === ttsCalls[0].text && c.voice !== blockedVoice),
+  JSON.stringify(ttsCalls.map((c) => `${c.blocked ? '✗' : '✓'}${c.voice}`)));
 t('换音色后仍能把内容读下去（注入失败下连读 3 句）', healed);
 t('换音色时给出明确提示', healMsgs.length > 0, healMsgs.join(' | '));
 

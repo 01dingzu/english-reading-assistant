@@ -24,4 +24,5 @@ _kokoro/
 _kokoro_probe.html
 _kokoro_probe.mjs
 _kokoro_live.mjs
+_kokoro_diag.mjs
 _voices_probe.mjs

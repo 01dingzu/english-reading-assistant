@@ -64,6 +64,29 @@ let activeSpeaker = null;    // 正在跟读的播放器，供 speakOnce 暂停�
 const failedVoices = new Set();   // 合成失败的音色（本次会话内不再尝试）
 const voiceAttempts = new Map();  // 音色 → 失败次数，用于「冷启动重试一次」
 
+// 超时护栏。合成和播放都可能「不报错、也不结束」：WebGPU 推理卡死、音频设备被拔掉、
+// 媒体元素僵在 playing 上（真机实测遇到过一次，跟读循环挂了 30 分钟没动静）。
+// 没有护栏时用户看到的是「除停止键外全都没反应」，所以每一环都必须有上限。
+const TIMEOUTS = {
+  synth: 120000,     // 本地模型单句合成上限（首次要编译 shader，给足余量）
+  playIdle: 12000,   // 播放期间时间轴停滞上限
+  playMin: 20000,    // 播放总时长下限
+  playSlack: 10000,  // 播放总时长 = 音频时长 + slack
+  speakStart: 12000, // 浏览器音色「开口」等待上限
+  speakPerChar: 150, // 浏览器音色每字符预算（配合语速），防止读完不回调
+  speakSlack: 15000,
+  speakMax: 300000,
+};
+/** 仅供验证脚本使用：把超时改小，便于确定性地验证护栏本身 */
+export function setTimeoutForTest(patch) { Object.assign(TIMEOUTS, patch || {}); }
+
+/** 标记错误出在哪个环节：合成失败值得熔断换引擎，播放失败只该跳过这一句 */
+function stageError(e, stage) {
+  const err = new Error(String((e && e.message) || e));
+  err.stage = stage;
+  return err;
+}
+
 export function getSettings() { return settings; }
 
 export async function loadSettings() {
@@ -381,9 +404,15 @@ export class Speaker {
     this._set('idle');
   }
 
+  _clearClipTimers() {
+    clearTimeout(this._idleTimer); this._idleTimer = null;
+    clearTimeout(this._absTimer); this._absTimer = null;
+  }
+
   _killAudio(revoke = true) {
     // 关键：音频被中途掐掉时 onended / onerror 都不会来，必须主动让等待方收尾，
     // 否则跟读循环会永远挂在这一句上（用户看到的是「停止键失灵」）。
+    this._clearClipTimers();
     const done = this._clipDone;
     this._clipDone = null;
     if (this.audio) {
@@ -404,6 +433,7 @@ export class Speaker {
     while (my === this.token && this.index >= 0 && this.index < this.items.length) {
       const item = this.items[this.index];
       let route = 'browser';
+      let again = false;        // 出错后是否停在原地把这一句重读
       try {
         if (preferKokoro()) {
           route = 'kokoro';
@@ -417,19 +447,24 @@ export class Speaker {
       } catch (e) {
         if (my !== this.token) return;
         const msg = String((e && e.message) || e);
-        if (route === 'kokoro') {
-          // 本地模型失败（内存不足 / 加载被清 / 合成异常）→ 本次会话不再尝试，
-          // 同一句交给后面的音色重读，用户不会卡在这里等
-          kokoroBroken = true;
-          if (this.onerror) this.onerror(`本地 AI 音色不可用（${msg}），已切回其他音色`);
+        if (route === 'kokoro' && e && e.stage === 'play') {
+          // 只是这一句放不出来（设备被拔 / 媒体元素僵死）→ 跳过继续；重试多半还是放不出来
+          if (this.onerror) this.onerror(`这一句没能播放（${msg}），已跳到下一句`);
         } else {
-          if (route === 'cloud') cloudBroken = true;
-          await this._handleFailure(e, my, route === 'cloud');
+          // 合成失败：不能把这一句跳过去 —— 换了音色/引擎之后停在原地重读
+          again = true;
+          if (route === 'kokoro') {
+            kokoroBroken = true;
+            if (this.onerror) this.onerror(`本地 AI 音色不可用（${msg}），已切回其他音色`);
+          } else {
+            if (route === 'cloud') cloudBroken = true;
+            await this._handleFailure(e, my, route === 'cloud');
+          }
         }
         if (my !== this.token) return;
       }
       if (my !== this.token) return;
-      this._select(this.index + 1);
+      this._select(again ? this.index : this.index + 1);
     }
     if (my !== this.token) return;
     this._select(-1);
@@ -501,11 +536,23 @@ export class Speaker {
         if (started) return;
         try { speechSynthesis.cancel(); } catch (e) { /* 忽略 */ }
         reject(new Error('语音引擎无响应'));
-      }, 12000);
-      u.onstart = () => { started = true; clearTimeout(guard); };
-      u.onend = () => { clearTimeout(guard); resolve(); };
+      }, TIMEOUTS.speakStart);
+      // 开口了但一直不回调（引擎僵死）也要收尾，否则跟读同样会永远停在句尾
+      let endGuard = null;
+      u.onstart = () => {
+        started = true;
+        clearTimeout(guard);
+        const est = Math.min(TIMEOUTS.speakMax,
+          text.length * TIMEOUTS.speakPerChar / Math.max(0.6, Number(settings.rate) || 1) + TIMEOUTS.speakSlack);
+        endGuard = setTimeout(() => {
+          try { speechSynthesis.cancel(); } catch (e) { /* 忽略 */ }
+          reject(new Error('语音引擎读完不回调'));
+        }, est);
+      };
+      u.onend = () => { clearTimeout(guard); clearTimeout(endGuard); resolve(); };
       u.onerror = (ev) => {
         clearTimeout(guard);
+        clearTimeout(endGuard);
         const kind = (ev && ev.error) || 'error';
         // cancel() 引发的 interrupted/canceled 属于正常中断
         if (kind === 'interrupted' || kind === 'canceled') resolve();
@@ -541,25 +588,62 @@ export class Speaker {
   async _speakKokoro(text) {
     const voice = settings.kokoro.voice || KOKORO_DEFAULT_VOICE;
     const speed = Math.min(1.5, Math.max(0.6, Number(settings.rate) || 1));
-    const clip = await kokoroSynth(text, { voice, speed });
+    let clip;
+    try {
+      clip = await kokoroSynth(text, { voice, speed, timeout: TIMEOUTS.synth });
+    } catch (e) {
+      throw stageError(e, 'synth');     // 推理卡死：熔断换其他音色，别让用户干等
+    }
     // 边播边算下一句：整章跟读不再句句干等推理
     const next = this.items[this.index + 1];
     if (next && next.text && preferKokoro()) kokoroPrefetch(next.text, { voice, speed });
-    await this._playClip(clip.url, { keepUrl: true });
+    try {
+      await this._playClip(clip.url, { keepUrl: true, expect: clip.duration });
+    } catch (e) {
+      throw stageError(e, 'play');      // 单句放不出来：跳过这一句就行，停用本地模型没意义
+    }
   }
 
-  _playClip(url, { keepUrl = false } = {}) {
+  _playClip(url, { keepUrl = false, expect = 0 } = {}) {
     const audio = new Audio(url);
     audio.preload = 'auto';
     this.audio = audio;
     return new Promise((resolve, reject) => {
+      let settled = false;
       // 交给实例保存，供 _killAudio 在「被停止/被打断」时收尾
       this._clipDone = { resolve, reject };
-      audio.onended = () => { this._clipDone = null; resolve(); };
-      audio.onerror = () => { this._clipDone = null; reject(new Error('音频播放失败')); };
+      const finish = (err) => {
+        if (settled) return;
+        settled = true;
+        this._clearClipTimers();
+        this._clipDone = null;
+        if (err) reject(err); else resolve();
+      };
+      // 停滞看门狗：播放中时间轴不再推进（设备被拔、媒体元素僵死）→ 不能当成「还在读」
+      const armIdle = () => {
+        clearTimeout(this._idleTimer);
+        this._idleTimer = setTimeout(() => finish(new Error('音频播放停滞')), TIMEOUTS.playIdle);
+        // 一旦知道真实时长（云端音频事先不知道），按真实时长重设总时长看门狗
+        const d = Number(audio.duration);
+        if (Number.isFinite(d) && d > 0) {
+          const want = Math.max(TIMEOUTS.playMin, d * 1000 + TIMEOUTS.playSlack);
+          if (want > absMs) { absMs = want; setAbs(want); }
+        }
+      };
+      const setAbs = (ms) => { clearTimeout(this._absTimer); this._absTimer = setTimeout(() => finish(new Error('音频播放超时')), ms); };
+      this._clearClipTimers();
+      let absMs = Math.max(TIMEOUTS.playMin, expect * 1000 + TIMEOUTS.playSlack);
+      armIdle();
+      setAbs(absMs);
+      audio.ontimeupdate = () => armIdle();
+      audio.onplaying = () => armIdle();
+      audio.onloadedmetadata = () => armIdle();
+      audio.ondurationchange = () => armIdle();
+      audio.onended = () => finish(null);
+      audio.onerror = () => finish(new Error('音频播放失败'));
       const p = audio.play();
       if (p && p.catch) {
-        p.catch(e => { this._clipDone = null; reject(new Error((e && e.message) || '播放被拦截')); });
+        p.catch(e => finish(new Error((e && e.message) || '播放被拦截')));
       }
     }).then(
       () => { this._killAudio(!keepUrl); },

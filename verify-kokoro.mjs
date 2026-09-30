@@ -1,6 +1,7 @@
 // verify-kokoro.mjs — 验证「本地 AI 音色（Kokoro-82M）」接入
 // 覆盖：音色表 → WAV 编码/归一化 → 模型加载与进度 → 合成缓存 → 引擎路由 →
-//       逐句跟读（含预取）→ 失败熔断与恢复 → 设置面板 UI → 持久化 → 首次下载动线 → 不碰 CDN
+//       逐句跟读（含预取）→ 超时护栏（合成卡死 / 音频僵死）→ 失败熔断与恢复 →
+//       设置面板 UI → 持久化 → 首次下载动线 → 不碰 CDN
 //
 // 为什么用注入式假模型：
 //   真模型要下 88MB（沙箱实测十几分钟），不适合做回归。这里把 `globalThis.__KOKORO_TEST_FACTORY__`
@@ -26,7 +27,7 @@ function t(name, ok, extra = '') {
 // ---------- 注入式假模型 ----------
 // 用 evaluateOnNewDocument 安装：每次新文档都在，重载后依然生效，同时挡住任何真实的 CDN 下载。
 function installMock() {
-  window.__kk = { calls: [], loads: 0, fail: 0, loud: 0, progressSent: 0 };
+  window.__kk = { calls: [], loads: 0, fail: 0, loud: 0, progressSent: 0, hang: 0 };
   globalThis.__KOKORO_TEST_FACTORY__ = async () => ({
     KokoroTTS: {
       from_pretrained: async (id, opt) => {
@@ -53,6 +54,8 @@ function installMock() {
           generate: async (text, { voice, speed }) => {
             window.__kk.calls.push({ text, voice, speed });
             if (window.__kk.fail) throw new Error('mock 合成失败');
+            // 模拟推理卡死：不报错也不返回（真机上 WebGPU 出过这种情况）
+            if (window.__kk.hang) await new Promise(() => {});
             const sr = 24000;
             const n = Math.round(0.4 * sr);
             const audio = new Float32Array(n);
@@ -292,6 +295,80 @@ const ctl = await js(async () => {
 });
 t('暂停状态可识别（音频型播放器支持原地续播）', ctl.paused === 'paused', ctl.paused);
 t('停止后回到 idle 并清空位置', ctl.after === 'idle' && ctl.index === -1, JSON.stringify(ctl));
+
+// ---------- F2. 播放护栏：音频僵死不能把跟读挂死 ----------
+// 真机实测：媒体元素进入 playing 后再也不回 ended，跟读循环挂了 30 分钟。
+// 这里用一个「永不 ended、时间轴也不推进」的假 Audio 复现，断言循环照样走完。
+const playGuard = await js(async () => {
+  const tts = await import('./js/tts.js');
+  await tts.saveSettings({ engine: 'auto', kokoro: { enabled: true, voice: 'af_heart' } });
+  window.__kk.calls.length = 0;
+  tts.setTimeoutForTest({ playIdle: 250, playMin: 200, playSlack: 100 });
+  const OrigAudio = window.Audio;
+  window.Audio = class {
+    constructor(u) { this.src = u; this.paused = false; this.duration = NaN; }
+    play() { return Promise.resolve(); }
+    pause() { this.paused = true; }
+  };
+  const msgs = [];
+  let timedOut = false;
+  const sp = new tts.Speaker();
+  sp.onerror = (m) => msgs.push(m);
+  sp.setItems([{ text: 'Wedge one.', node: null }, { text: 'Wedge two.', node: null }]);
+  const t0 = performance.now();
+  const p = sp.play(0);
+  await Promise.race([p, new Promise((r) => setTimeout(() => { timedOut = true; r(); }, 8000))]);
+  const out = {
+    timedOut, ms: Math.round(performance.now() - t0), state: sp.state, index: sp.index,
+    calls: window.__kk.calls.length, msgs, broken: tts.isKokoroBroken(),
+  };
+  sp.stop();
+  window.Audio = OrigAudio;
+  tts.setTimeoutForTest({ playIdle: 12000, playMin: 20000, playSlack: 10000 });
+  return out;
+});
+t('音频僵死（永不 ended）时跟读不会挂死', playGuard.timedOut === false && playGuard.state === 'idle', JSON.stringify(playGuard));
+t('音频僵死时两句照样读下去（不丢内容）', playGuard.calls === 2 && playGuard.index === -1, `calls=${playGuard.calls}`);
+t('播放失败只跳过这一句，不停用本地模型',
+  playGuard.broken === false && playGuard.msgs.some((m) => /没能播放/.test(m)), playGuard.msgs.join(' | '));
+
+// ---------- F3. 合成护栏：推理卡死不能让人干等 ----------
+const synthGuard = await js(async () => {
+  const tts = await import('./js/tts.js');
+  await tts.saveSettings({ engine: 'auto', kokoro: { enabled: true, voice: 'af_heart' } });
+  window.__kk.hang = 1;
+  window.__kk.calls.length = 0;
+  tts.setTimeoutForTest({ synth: 300 });
+  // 记录浏览器音色通道实际读到的文本，用来证明「卡死的这句被重读了」
+  const orig = speechSynthesis.speak.bind(speechSynthesis);
+  window.__spoken = [];
+  speechSynthesis.speak = (u) => { window.__spoken.push(u.text); return orig(u); };
+
+  const msgs = [];
+  let timedOut = false;
+  const sp = new tts.Speaker();
+  sp.onerror = (m) => msgs.push(m);
+  sp.setItems([{ text: 'Hang one.', node: null }, { text: 'Hang two.', node: null }]);
+  const t0 = performance.now();
+  await Promise.race([sp.play(0), new Promise((r) => setTimeout(() => { timedOut = true; r(); }, 8000))]);
+  const out = {
+    timedOut, ms: Math.round(performance.now() - t0), state: sp.state,
+    kokoroCalls: window.__kk.calls.length, spoken: window.__spoken.slice(0, 3),
+    msgs, broken: tts.isKokoroBroken(), usable: tts.kokoroUsable(),
+  };
+  sp.stop();
+  speechSynthesis.speak = orig;
+  window.__kk.hang = 0;
+  tts.setTimeoutForTest({ synth: 120000 });
+  await tts.saveSettings({ kokoro: { voice: 'af_bella' } });   // 解除熔断，不影响后续段
+  return out;
+});
+t('本地合成卡死时不会永远干等（超时熔断 + 明确提示）',
+  synthGuard.timedOut === false && synthGuard.broken === true
+  && synthGuard.msgs.some((m) => /本地 AI 音色不可用/.test(m)),
+  JSON.stringify({ t: synthGuard.timedOut, ms: synthGuard.ms, broken: synthGuard.broken, msgs: synthGuard.msgs }));
+t('卡死的这一句不跳过（换音色后重读同一句）',
+  synthGuard.spoken[0] === 'Hang one.', JSON.stringify(synthGuard.spoken));
 
 // ---------- G. 失败熔断与恢复 ----------
 const fail = await js(async () => {

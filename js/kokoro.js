@@ -258,8 +258,9 @@ function evict() {
 /**
  * 合成一句 → { url(blob:), duration, bytes }
  * 结果按「音色+语速+文本」缓存，重复朗读同一句不会重复推理。
+ * timeout>0 时超时即失败，并且**不把卡死的 promise 留在缓存里**（否则下次拿到同一个死结）。
  */
-export async function synthesize(text, { voice = DEFAULT_VOICE, speed = 1, signal } = {}) {
+export async function synthesize(text, { voice = DEFAULT_VOICE, speed = 1, signal, timeout = 0 } = {}) {
   const v = VOICE_IDS.has(voice) ? voice : DEFAULT_VOICE;
   const sp = Math.min(1.5, Math.max(0.6, Number(speed) || 1));
   const key = cacheKey(text, v, sp);
@@ -271,11 +272,20 @@ export async function synthesize(text, { voice = DEFAULT_VOICE, speed = 1, signa
     evict();
   }
   try {
+    if (timeout > 0) return await withTimeout(p, timeout, '本地语音合成超时');
     return await p;
   } catch (e) {
     if (cache.get(key) === p) cache.delete(key);   // 失败结果不留缓存
     throw e;
   }
+}
+
+function withTimeout(p, ms, msg) {
+  let timer;
+  return Promise.race([
+    p,
+    new Promise((_, rej) => { timer = setTimeout(() => rej(new Error(msg)), ms); }),
+  ]).finally(() => clearTimeout(timer));
 }
 
 /** 预合成下一句（跟读时边播边算下一句，减少句间空档）。失败静默，回头正式合成时再报错。 */
