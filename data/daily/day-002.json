@@ -1,0 +1,29 @@
+{
+  "day": 2,
+  "date": "2026-10-20",
+  "week": "W01",
+  "theme": "城市里的鸟",
+  "title": "Why City Birds Sing Higher",
+  "words": 412,
+  "density": 3.9,
+  "minutes": 10,
+  "before": [
+    "闭上眼想一条马路的声音：它是高的还是低的？鸟叫呢？",
+    "如果鸟为了被听见而唱得更高，这个改变会不会有代价？先猜一个。"
+  ],
+  "paras": [
+    "A bird's song carries a message: this is my territory, and I am here. In a forest the message travels well. In a city, it has competition. The low rumble of traffic, the hum of air conditioners, the growl of a bus — all of this sits in the same low range where much of a bird's song lives. The noise does not stop the bird from singing, but it does make the song harder to hear.",
+    "Researchers call this masking. A signal is masked when another sound covers it, in the way a conversation is lost under a passing train. Birds cannot ask the city to be quiet, so they do the next best thing: they move their song away from the noise. Many urban birds now sing at a higher pitch than their rural relatives of the same species.",
+    "This shift is easy to measure and hard to explain. A higher note is not simply a better note. Low sound travels further and bends around walls; high sound is more direct and is blocked sooner. So a bird that raises its pitch to be heard over traffic may be giving up reach. Its song is clearer inside the street but weaker across the district.",
+    "There is a second cost, one that has nothing to do with sound. In many species, females read pitch as a sign of size. A large male usually sings lower. A male who raises his pitch to compete with engines may sound smaller than he is, and a smaller song can mean fewer mates. Studies on one common city bird have found exactly this tension: males in noisy areas sing higher, and their songs are less attractive to females.",
+    "Birds have other options. Some sing louder, which costs energy. Some sing earlier, before the traffic rises, which pushes the dawn chorus into the dark. Some change the shape of a note rather than its height, adding a quick rise or a sharp cut that stands out against a steady background. None of these comes free. Each takes energy, time, or attention away from something else.",
+    "What looks like adaptation, then, is closer to a bargain. The city does not make birds better singers. It makes them different singers, shaped by a pressure that never lets up. And because the change is written in sound, we can hear evolution happening — if we stop long enough to notice that the morning sounds a little higher than it used to."
+  ],
+  "after": [
+    "一句话主旨：这篇的核心是什么，两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（不是总结，是你同意不同意）。",
+    "今天计时读第一遍：从第一句到最后一句，中途不停，读多久？"
+  ],
+  "note": "第三段有两个分号句：Low sound travels further and bends around walls; high sound is more direct and is blocked sooner. 分号两边是一组对照，别拆开逐字读，先看「低音 vs 高音」的差别，具体细节读完再回填。"
+}
