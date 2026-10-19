@@ -1,0 +1,294 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FAF9F5">
+<link rel="icon" href="data:,">
+<title>今日共读 · 读原文</title>
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  html { font-size: 16px; }
+  body {
+    padding-bottom: 104px;
+    background: var(--bg);
+    -webkit-text-size-adjust: 100%;
+  }
+
+  /* ---------- 顶栏 ---------- */
+  #d-top {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px;
+    padding: 12px 18px;
+    background: rgba(250,249,245,0.94);
+    backdrop-filter: blur(8px);
+    border-bottom: 0.5px solid var(--line);
+  }
+  #d-back {
+    flex: none;
+    width: 30px; height: 30px; border-radius: 50%;
+    display: grid; place-items: center;
+    text-decoration: none; font-size: 15px;
+    color: var(--ink-2); background: var(--surface);
+    border: 0.5px solid var(--line);
+  }
+  #d-back:active { background: var(--accent-soft); color: var(--accent); }
+  #d-meta { flex: 1; min-width: 0; display: flex; align-items: baseline; gap: 8px; }
+  #d-day { font-size: 13px; font-weight: 600; color: var(--accent); letter-spacing: 0.02em; }
+  #d-theme {
+    font-size: 12px; color: var(--ink-3);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  #d-font { flex: none; display: flex; gap: 6px; }
+  #d-font button {
+    font-family: var(--ui-font); font-size: 13px;
+    min-width: 34px; height: 30px; border-radius: 8px;
+    border: 0.5px solid var(--line); background: var(--surface); color: var(--ink-2);
+    cursor: pointer;
+  }
+  #d-font button:active { background: var(--accent-soft); color: var(--accent); }
+
+  #d-progress { position: sticky; top: 55px; z-index: 19; height: 2px; background: transparent; }
+  #d-bar { height: 100%; width: 0; background: var(--accent); opacity: .5; transition: width .12s linear; }
+
+  /* ---------- 正文 ---------- */
+  #d-main { max-width: 680px; margin: 0 auto; padding: 22px 20px 0; }
+
+  #d-head { margin-bottom: 20px; }
+  #d-title {
+    font-family: var(--reader-font);
+    font-size: calc(var(--fs) * 1.28);
+    line-height: 1.32;
+    font-weight: 600;
+    letter-spacing: -0.01em;
+    margin-bottom: 10px;
+  }
+  #d-sub { font-size: 12.5px; color: var(--ink-3); letter-spacing: .02em; }
+
+  .d-box {
+    background: var(--accent-soft);
+    border-radius: var(--radius);
+    padding: 14px 16px;
+    margin: 0 0 22px;
+    font-size: 14px;
+    line-height: 1.75;
+    color: #1B4F3F;
+  }
+  .d-box b { display: block; font-size: 12px; letter-spacing: .06em; opacity: .75; margin-bottom: 6px; font-weight: 600; }
+  .d-box ol { margin: 0; padding-left: 18px; }
+  .d-box li { margin-bottom: 4px; }
+  .d-box li:last-child { margin-bottom: 0; }
+
+  #d-article {
+    font-family: var(--reader-font);
+    font-size: var(--fs);
+    line-height: 1.92;
+    letter-spacing: 0.004em;
+    color: var(--ink);
+  }
+  #d-article p { margin: 0 0 1.35em; }
+  #d-article p:last-child { margin-bottom: 0; }
+
+  .tok {
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0 1px;
+    transition: background-color .1s;
+    -webkit-tap-highlight-color: transparent;
+  }
+  .tok:hover { background: #EFEDE4; }
+  .tok:active { background: #E6E2D4; }
+  .tok.saved {
+    background: var(--accent-soft);
+    box-shadow: inset 0 -1.5px 0 rgba(15,110,86,.55);
+  }
+  .tok.tapped {
+    background: var(--warn-soft);
+    box-shadow: inset 0 -1.5px 0 rgba(133,79,11,.5);
+  }
+
+  #d-note {
+    margin-top: 26px; padding: 12px 14px;
+    border-left: 2px solid var(--line);
+    font-size: 13px; line-height: 1.7; color: var(--ink-2);
+    background: #FCFAF4;
+    border-radius: 0 8px 8px 0;
+  }
+  #d-end { text-align: center; color: var(--ink-3); font-size: 12px; padding: 26px 0 10px; }
+
+  /* ---------- 底部常驻条 ---------- */
+  #d-dock {
+    position: fixed; left: 0; right: 0; bottom: 0; z-index: 30;
+    display: flex; align-items: center; gap: 10px;
+    padding: 10px 16px calc(10px + env(safe-area-inset-bottom));
+    background: rgba(255,255,255,.96);
+    backdrop-filter: blur(10px);
+    border-top: 0.5px solid var(--line);
+  }
+  #d-count {
+    flex: 1; min-width: 0; font-size: 13px; color: var(--ink-2);
+    display: flex; align-items: baseline; gap: 8px;
+    overflow: hidden; white-space: nowrap;
+  }
+  #d-count b { color: var(--accent); font-size: 15px; font-weight: 600; }
+  #d-clock { font-size: 11.5px; color: var(--ink-3); font-variant-numeric: tabular-nums; }
+  #d-dock button, #d-dock a {
+    flex: none;
+    font-family: var(--ui-font); font-size: 13px;
+    padding: 7px 13px; border-radius: 8px;
+    border: 0.5px solid var(--line); background: var(--surface);
+    color: var(--ink); text-decoration: none; cursor: pointer;
+  }
+  #d-open-list { background: var(--accent-soft); border-color: transparent; color: var(--accent); font-weight: 600; }
+
+  /* ---------- 弹层 ---------- */
+  #d-sheet { position: fixed; inset: 0; z-index: 40; background: rgba(38,37,31,.32); display: flex; align-items: flex-end; }
+  #d-sheet-card {
+    position: relative;
+    width: 100%; max-height: 82vh; overflow-y: auto;
+    background: var(--surface);
+    border-radius: 16px 16px 0 0;
+    padding: 20px 20px calc(22px + env(safe-area-inset-bottom));
+    animation: d-up .18s ease-out;
+  }
+  @keyframes d-up { from { transform: translateY(14px); opacity: .6 } to { transform: none; opacity: 1 } }
+  #d-sheet-x {
+    position: absolute; top: 12px; right: 14px;
+    width: 28px; height: 28px; border-radius: 50%;
+    border: none; background: #F2F0E9; color: var(--ink-2);
+    font-size: 17px; line-height: 1; cursor: pointer;
+  }
+  .sh-word { font-family: var(--reader-font); font-size: 30px; line-height: 1.2; }
+  .sh-ph { font-size: 14px; color: var(--ink-3); margin-left: 8px; font-family: var(--ui-font); }
+  .sh-tag {
+    display: inline-block; font-size: 10px; letter-spacing: .04em;
+    padding: 2px 6px; border-radius: 4px; margin-left: 8px;
+    background: #F1EFE7; color: var(--ink-2); vertical-align: middle;
+  }
+  .sh-tr { margin-top: 12px; font-size: 14.5px; line-height: 1.72; color: var(--ink); white-space: pre-line; }
+  .sh-ctx {
+    margin-top: 14px; padding: 12px 14px; border-radius: 10px;
+    background: #FCFAF4; border: 0.5px solid var(--line);
+    font-family: var(--reader-font); font-size: 15px; line-height: 1.7; color: var(--ink-2);
+  }
+  .sh-ctx em { font-style: normal; background: var(--warn-soft); color: var(--warn); padding: 0 2px; border-radius: 3px; }
+  .sh-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .sh-actions button {
+    font-family: var(--ui-font); font-size: 13.5px;
+    padding: 9px 16px; border-radius: 9px;
+    border: 0.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer;
+  }
+  .sh-actions .danger { color: var(--danger); border-color: #F0D9D9; }
+  .sh-empty { text-align: center; color: var(--ink-3); font-size: 13.5px; padding: 26px 0; line-height: 1.8; }
+
+  .lg-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }
+  .lg-sub { font-size: 12px; color: var(--ink-3); margin-bottom: 16px; }
+  .lg-row {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 10px 0; border-bottom: 0.5px solid var(--line);
+    font-size: 14px;
+  }
+  .lg-row:last-of-type { border-bottom: none; }
+  .lg-w { font-family: var(--reader-font); font-size: 17px; flex: none; }
+  .lg-ph { font-size: 11.5px; color: var(--ink-3); flex: none; }
+  .lg-tr {
+    flex: 1; min-width: 0; color: var(--ink-2); font-size: 12.5px;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .lg-tools { display: flex; gap: 8px; margin-top: 18px; }
+  .lg-tools button {
+    flex: 1; font-family: var(--ui-font); font-size: 13.5px;
+    padding: 11px 12px; border-radius: 9px;
+    border: 0.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer;
+  }
+  .lg-tools .primary { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+
+  /* ---------- 提示 / 错误 ---------- */
+  #d-tip {
+    display: flex; align-items: flex-start; gap: 10px;
+    background: var(--warn-soft); color: var(--warn);
+    border-radius: var(--radius); padding: 12px 14px; margin-bottom: 20px;
+    font-size: 13px; line-height: 1.65;
+  }
+  #d-tip b { font-size: 13px; }
+  #d-tip button {
+    flex: none; font-family: var(--ui-font); font-size: 12px;
+    padding: 4px 9px; border-radius: 6px; border: 0.5px solid rgba(133,79,11,.35);
+    background: transparent; color: var(--warn); cursor: pointer; margin-left: auto;
+  }
+  #d-error {
+    background: var(--danger-soft); color: var(--danger);
+    border-radius: var(--radius); padding: 14px 16px;
+    font-size: 13.5px; line-height: 1.75; margin-bottom: 18px;
+  }
+  #d-error code {
+    display: block; margin-top: 8px; padding: 8px 10px;
+    background: rgba(255,255,255,.7); border-radius: 6px;
+    font-size: 12.5px; color: #7A2222; word-break: break-all;
+  }
+  #d-toast {
+    position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
+    z-index: 50; max-width: 84vw;
+    padding: 9px 16px; border-radius: 999px;
+    background: rgba(38,37,31,.92); color: #FAF9F5;
+    font-size: 13px; line-height: 1.4;
+    animation: d-up .16s ease-out;
+  }
+  @media (max-width: 420px) {
+    #d-main { padding: 18px 16px 0; }
+    #d-dock { padding-left: 12px; padding-right: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<header id="d-top">
+  <a id="d-back" href="../index.html#/shelf" title="回书架">←</a>
+  <div id="d-meta">
+    <span id="d-day">Day —</span>
+    <span id="d-theme"></span>
+  </div>
+  <div id="d-font">
+    <button id="d-fm" title="缩小字号">A-</button>
+    <button id="d-fp" title="放大字号">A+</button>
+  </div>
+</header>
+<div id="d-progress"><div id="d-bar"></div></div>
+
+<main id="d-main">
+  <div id="d-error" hidden></div>
+  <div id="d-tip" hidden>
+    <span><b>点一下词 = 存进生词本</b><br>再点一下取消。点两下看释义。</span>
+    <button id="d-tip-close">知道了</button>
+  </div>
+
+  <div id="d-head">
+    <h1 id="d-title"></h1>
+    <div id="d-sub"></div>
+  </div>
+
+  <section id="d-before" class="d-box" hidden></section>
+  <article id="d-article"></article>
+  <p id="d-note" hidden></p>
+  <section id="d-after" class="d-box" hidden style="margin-top:26px"></section>
+  <div id="d-end">— 完 —</div>
+</main>
+
+<div id="d-dock">
+  <span id="d-count"><b id="d-n">0</b> 词已标记 <span id="d-clock"></span></span>
+  <button id="d-open-list">清单</button>
+  <a id="d-go-review" href="../index.html#/review">去复习</a>
+</div>
+
+<div id="d-sheet" hidden>
+  <div id="d-sheet-card">
+    <button id="d-sheet-x" title="关闭">×</button>
+    <div id="d-sheet-body"></div>
+  </div>
+</div>
+
+<div id="d-toast" hidden></div>
+
+<script type="module" src="../js/daily.js"></script>
+</body>
+</html>

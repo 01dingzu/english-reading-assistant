@@ -1,0 +1,30 @@
+{
+  "day": 1,
+  "date": "2026-10-19",
+  "week": "W01",
+  "theme": "城市里的鸟",
+  "title": "Where City Birds Find Their Food",
+  "words": 434,
+  "density": 5.5,
+  "minutes": 12,
+  "before": [
+    "一座全是混凝土的城市，鸟靠什么活下来？先想三个来源。",
+    "食物变多，对鸟一定是好事吗？"
+  ],
+  "paras": [
+    "A city looks like a hard place for a bird. Concrete covers the ground, trees stand in straight rows, and most insects have gone. Yet some birds do very well here. The reason is simple: cities are not empty of food. They are full of food that appears in the same place, at the same time, every day.",
+    "That predictability matters more than quantity. A forest offers a bird many kinds of food, but each one is hard to find and moves with the season. A city offers fewer kinds, yet a bird can learn exactly where they are. A pigeon that finds bread outside a station at eight every morning will come back at eight every morning.",
+    "City birds use four main food lines. The first is deliberate feeding: seed and bread put out by people, in parks or on window ledges. The second is refuse, the waste that collects around shops, markets and homes. The third is the living world that survives in the city, such as insects on grass, worms after rain, and fruit on ornamental trees. The fourth is other animals, from earthworms to the chicks of smaller birds.",
+    "Different species use these lines in different ways. Gulls and crows are scavengers; they walk, watch, and take what is left. Tits and sparrows are gleaners, picking small items from the ground and from bark. Swifts and swallows are hawkers, catching insects in the air above the roofs. Each method is an old skill, moved from the forest to the street.",
+    "The results are not the same for every bird. Species that can eat many things, the generalists, usually increase. Species that need one special food, or one special place to nest, often decline. Over time, cities in different parts of the world begin to hold the same short list of birds. This loss of difference has a name: biotic homogenization.",
+    "Food quality is the second problem. Bread and chips are rich in energy and poor in protein. Studies in several cities have found that young birds fed on such food grow more slowly, and that adults carry more fat and less muscle than birds in the countryside. A bird can be well fed and still be poorly nourished.",
+    "So the question for a city is not whether birds can find food. They can. The question is what kind of food we leave for them, and whether we keep the small wild places, a hedge, a pond, a patch of weeds, where the specialists can still make a living. A city that feeds only the generalists will slowly lose the rest."
+  ],
+  "after": [
+    "一句话主旨：这篇在说什么，别超过两句。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的反应。",
+    "读了几分钟（大概就行），用来算速度基线。"
+  ],
+  "note": "最后一段的 a hedge, a pond, a patch of weeds 是三个并列插入语，插在句子中间，读起来卡。先别停下来拆，读完再回头看。"
+}
