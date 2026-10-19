@@ -54,6 +54,7 @@ function fail(html) {
   $id('d-article').innerHTML = '';
   $id('d-end').hidden = true;
   $id('d-dock').style.display = 'none';
+  $id('d-timer').hidden = true;
 }
 
 // ---------- 启动 ----------
@@ -90,6 +91,7 @@ async function boot() {
   await maybeShowTip();
   updateDock();
   startClock();
+  await initTimer();
 }
 
 async function loadDictSafe() {
@@ -324,11 +326,14 @@ function todayRecords() {
 function buildPlain() {
   const list = todayRecords();
   const head = [
-    `Day ${DATA.day} · ${DATA.title}`,
+    `第 ${DATA.day} 篇 · ${DATA.title}`,
     `${DATA.date || ''} · ${[DATA.week, DATA.theme].filter(Boolean).join(' ')} · ${DATA.words || '?'} 词 · 生词密度 ${DATA.density || '?'}`,
     '',
-    `今日标记 ${list.length} 词：`,
   ];
+  if (timerSaved) {
+    head.push(`通读 ${fmtClock(timerSaved.ms)} · ${timerSaved.wpm} wpm（${timerSaved.words} 词）`, '');
+  }
+  head.push(`今日标记 ${list.length} 词：`);
   const rows = list.map((r, i) => {
     const ph = r.ph ? ` /${r.ph}/` : '';
     const tr = (r.tr || '').split('\n')[0];
@@ -429,6 +434,125 @@ function startClock() {
   setInterval(tick, 1000);
 }
 
+// ---------- 通读计时器 ----------
+// 与上面的 d-clock 分工不同：d-clock 是「页面停留多久」，从打开就算，含查词和发呆；
+// 这个计时器只掐「第一遍通读」，由用户自己按开始/结束，结果按篇号存进 kv，
+// 我这边能直接读出来更新基线，不需要她手抄。
+const TIMER_KEY = 'read.timer.';   // + 篇号
+let timerState = 'idle';           // idle | run | done
+let timerStart = 0;
+let timerMs = 0;
+let timerAwayMs = 0;
+let timerAwayAt = 0;
+let timerTick = null;
+let timerSaved = null;             // 这一篇上一次的记录
+
+const fmtClock = (ms) => {
+  const s = Math.max(0, Math.round(ms / 1000));
+  return `${Math.floor(s / 60)}:${String(s % 60).padStart(2, '0')}`;
+};
+
+function timerElapsed() {
+  if (timerState !== 'run') return timerMs;
+  const paused = timerAwayAt ? Date.now() - timerAwayAt : 0;
+  return Math.max(0, Date.now() - timerStart - timerAwayMs - paused);
+}
+
+function renderTimer() {
+  const btn = $id('d-timer-btn');
+  const clock = $id('d-timer-clock');
+  const hint = $id('d-timer-hint');
+  const done = $id('d-timer-done');
+
+  if (timerState === 'run') {
+    btn.textContent = '读完了';
+    btn.classList.add('on');
+    clock.classList.add('on');
+    clock.textContent = fmtClock(timerElapsed());
+    hint.textContent = '计时中 · 切走会自动暂停';
+    done.hidden = true;
+    return;
+  }
+
+  btn.classList.remove('on');
+  clock.classList.remove('on');
+
+  if (timerState === 'done') {
+    btn.textContent = '重测';
+    clock.textContent = fmtClock(timerMs);
+    hint.textContent = '已存';
+    done.hidden = false;
+    return;
+  }
+
+  done.hidden = true;
+  btn.textContent = timerSaved ? '重测' : '开始通读计时';
+  clock.textContent = timerSaved ? fmtClock(timerSaved.ms) : '0:00';
+  hint.textContent = timerSaved
+    ? `上次 ${fmtClock(timerSaved.ms)} · ${timerSaved.wpm} wpm`
+    : '第一遍不停、不点词，读完按停';
+}
+
+function startTimer() {
+  timerState = 'run';
+  timerStart = Date.now();
+  timerMs = 0;
+  timerAwayMs = 0;
+  timerAwayAt = document.hidden ? Date.now() : 0;
+  $id('d-timer-done').hidden = true;
+  renderTimer();
+  clearInterval(timerTick);
+  timerTick = setInterval(() => { if (timerState === 'run') renderTimer(); }, 250);
+}
+
+async function stopTimer() {
+  timerMs = timerElapsed();
+  clearInterval(timerTick);
+
+  const words = Number(DATA.words) || 0;
+  if (timerMs < 5000 || !words) {
+    timerState = 'idle';
+    renderTimer();
+    toast('不到 5 秒，这次不算');
+    return;
+  }
+
+  timerState = 'done';
+  const mins = timerMs / 60000;
+  const wpm = Math.round(words / mins);
+  const rec = { day: DAY, words, ms: timerMs, wpm, at: Date.now() };
+  timerSaved = rec;
+
+  $id('d-timer-done').innerHTML =
+    `${words} 词 · ${fmtClock(timerMs)} · <b>${wpm} wpm</b><br>`
+    + '<span style="color:var(--ink-3);font-size:12.5px">已存进这一篇的记录，我明天读它来调难度</span>';
+  renderTimer();
+  toast(`通读 ${wpm} wpm`);
+
+  try {
+    await kv.set(TIMER_KEY + DAY, rec);
+  } catch (e) {
+    toast('计时结果没存上（数据库拒绝）');
+  }
+}
+
+function onTimerBtn() {
+  if (timerState === 'run') stopTimer();
+  else startTimer();
+}
+
+async function initTimer() {
+  try { timerSaved = (await kv.get(TIMER_KEY + DAY)) || null; } catch (e) { timerSaved = null; }
+  renderTimer();
+
+  // 切走标签页时暂停，不然去回个消息回来，wpm 就废了
+  document.addEventListener('visibilitychange', () => {
+    if (timerState !== 'run') return;
+    if (document.hidden) timerAwayAt = Date.now();
+    else if (timerAwayAt) { timerAwayMs += Date.now() - timerAwayAt; timerAwayAt = 0; }
+  });
+}
+
 // ---------- 字号 / 提示 ----------
 async function readFont() {
   try {
@@ -464,6 +588,7 @@ function bindUI() {
   $id('d-fp').onclick = () => setFont(2);
   $id('d-fm').onclick = () => setFont(-2);
   $id('d-open-list').onclick = () => showList();
+  $id('d-timer-btn').onclick = onTimerBtn;
   $id('d-sheet-x').onclick = () => closeSheet();
   $id('d-sheet').addEventListener('click', (e) => {
     if (e.target.id === 'd-sheet') closeSheet();

@@ -195,8 +195,59 @@ await sleep(400);
 const fs2 = await page.evaluate(() => getComputedStyle(document.querySelector('#d-article')).fontSize);
 t('字号跨刷新记住', fs2 === fs1, `${fs1} → ${fs2}`);
 
-// ---- 8. 首页联动：App 里能看到这批词 ----
-await page.goto('http://127.0.0.1:8891/', { waitUntil: 'networkidle2' });
+// ---- 8. 通读计时器 ----
+await page.goto(URL_DAILY, { waitUntil: 'networkidle2' });
+await page.waitForSelector('#d-article .tok', { timeout: 30000 });
+await sleep(500);
+
+const timerInit = await page.evaluate(() => ({
+  exists: !!document.querySelector('#d-timer'),
+  btn: document.querySelector('#d-timer-btn')?.textContent || '',
+  doneHidden: document.querySelector('#d-timer-done')?.hidden !== false,
+}));
+t('计时器渲染出来了', timerInit.exists);
+t('计时器初始按钮可识别', /开始通读计时|重测/.test(timerInit.btn), timerInit.btn);
+t('计时器初始不显示结果', timerInit.doneHidden);
+
+await page.evaluate(() => document.querySelector('#d-timer-btn').click());
+await sleep(400);
+const running = await page.evaluate(() => ({
+  btn: document.querySelector('#d-timer-btn').textContent,
+  clockOn: document.querySelector('#d-timer-clock').classList.contains('on'),
+}));
+t('点开始后按钮变「读完了」', running.btn === '读完了', running.btn);
+t('计时中时钟变红', running.clockOn);
+
+await sleep(5400);
+await page.evaluate(() => document.querySelector('#d-timer-btn').click());
+await sleep(500);
+const stopped = await page.evaluate(() => ({
+  doneShown: document.querySelector('#d-timer-done').hidden === false,
+  text: document.querySelector('#d-timer-done').textContent,
+}));
+t('停止后展示 wpm 结果', stopped.doneShown && /\d+\s*wpm/.test(stopped.text), stopped.text.slice(0, 60));
+
+const savedTimer = await page.evaluate(async () => {
+  const mod = await import(new URL('../js/db.js', location.href).href);
+  const all = await mod.kv.all();
+  return all.filter((r) => String(r.key).startsWith('read.timer.')).map((r) => r.value);
+});
+t('计时结果写进 kv（我这边能读）', savedTimer.length >= 1 && savedTimer[0].wpm > 0 && savedTimer[0].words > 0,
+  JSON.stringify(savedTimer[0] || null));
+await page.screenshot({ path: path.join(SHOT_DIR, 'daily-5-timer.png') });
+
+await page.reload({ waitUntil: 'networkidle2' });
+await page.waitForSelector('#d-article .tok', { timeout: 30000 });
+await sleep(700);
+const afterReload = await page.evaluate(() => ({
+  btn: document.querySelector('#d-timer-btn').textContent,
+  hint: document.querySelector('#d-timer-hint').textContent,
+}));
+t('刷新后仍显示上次成绩', /wpm/.test(afterReload.hint) && afterReload.btn === '重测',
+  `${afterReload.btn} / ${afterReload.hint}`);
+
+// ---- 9. 首页联动：App 里能看到这批词 ----
+await page.goto(new URL('../', URL_DAILY).href, { waitUntil: 'networkidle2' });
 await page.waitForSelector('#dict-status', { timeout: 30000 });
 await sleep(800);
 const appSees = await page.evaluate(async () => {

@@ -231,6 +231,29 @@
     background: rgba(255,255,255,.7); border-radius: 6px;
     font-size: 12.5px; color: #7A2222; word-break: break-all;
   }
+  /* ---------- 通读计时器 ---------- */
+  #d-timer {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    padding: 11px 14px; margin: 0 0 22px;
+    background: var(--surface); border: 0.5px solid var(--line);
+    border-radius: var(--radius);
+    font-size: 13px; color: var(--ink-2);
+  }
+  #d-timer-btn {
+    flex: none; font-family: var(--ui-font); font-size: 13.5px; font-weight: 500;
+    padding: 8px 15px; border-radius: 9px; cursor: pointer;
+    border: 0.5px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  #d-timer-btn.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+  #d-timer-clock {
+    flex: none; font-variant-numeric: tabular-nums;
+    font-size: 17px; font-weight: 600; color: var(--ink); letter-spacing: .02em;
+  }
+  #d-timer-clock.on { color: var(--danger); }
+  #d-timer-hint { flex: 1; min-width: 132px; font-size: 12.5px; color: var(--ink-3); line-height: 1.5; }
+  #d-timer-done { flex: 1 1 100%; font-size: 13.5px; color: var(--ink); line-height: 1.7; }
+  #d-timer-done b { font-size: 16px; color: var(--accent); }
+
   #d-toast {
     position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
     z-index: 50; max-width: 84vw;
@@ -270,6 +293,13 @@
   <div id="d-head">
     <h1 id="d-title"></h1>
     <div id="d-sub"></div>
+  </div>
+
+  <div id="d-timer">
+    <button id="d-timer-btn" type="button">开始通读计时</button>
+    <span id="d-timer-clock">0:00</span>
+    <span id="d-timer-hint">第一遍不停、不点词，读完按停</span>
+    <span id="d-timer-done" hidden></span>
   </div>
 
   <section id="d-before" class="d-box" hidden></section>
