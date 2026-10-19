@@ -115,11 +115,14 @@ async function loadVocab() {
 
 // ---------- 渲染 ----------
 function renderHead() {
-  $id('d-day').textContent = `Day ${DATA.day}`;
+  // 这里只写「篇」，不写 Day —— Day 是「第几个阅读日」，一篇一天时两者同号，
+  // 一天读两篇时就会打架（Day 1 里有第 1、2 篇）。用篇号，语义唯一，不会被误读成日期。
+  $id('d-day').textContent = `第 ${DATA.day} 篇`;
   $id('d-theme').textContent = [DATA.week, DATA.theme].filter(Boolean).join(' · ');
   $id('d-title').textContent = DATA.title || '';
 
   const bits = [];
+  if (DATA.date) bits.push(DATA.date);
   if (DATA.words) bits.push(`${DATA.words} 词`);
   if (DATA.density) bits.push(`生词密度 ${DATA.density}/100`);
   if (DATA.minutes) bits.push(`建议 ${DATA.minutes} 分钟`);

@@ -49,7 +49,7 @@ const info = await page.evaluate(() => ({
 
 t('没有加载错误', !info.err, info.err);
 t('标题渲染', info.title === 'Where City Birds Find Their Food', info.title);
-t('Day 标记', /Day 1/.test(info.day), info.day);
+t('篇号标记', /第 1 篇/.test(info.day), info.day);
 t('7 个段落', info.paras === 7, info.paras);
 t('词元切成可点（> 380）', info.toks > 380, info.toks);
 t('读前预测有内容', info.before);
