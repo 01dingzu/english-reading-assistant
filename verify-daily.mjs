@@ -58,16 +58,39 @@ t('正文字号 ≥ 20px', parseFloat(info.fs) >= 20, info.fs);
 await page.screenshot({ path: path.join(SHOT_DIR, 'daily-1-initial.png') });
 
 // ---- 2. 单击 = 入库 ----
-// 单击延后 250ms 才执行（为了识别双击），所以要等够
-const clickTok = async (surface, count = 1) => page.evaluate((w, c) => {
-  const n = [...document.querySelectorAll('#d-article .tok')]
-    .find((x) => x.dataset.w.toLowerCase() === w);
-  if (!n) return false;
-  for (let i = 0; i < c; i++) n.click();
-  return true;
-}, surface, count);
+// 单击延后 250ms 才执行（为了识别双击），所以要等够。
+//
+// 注意：这里必须用**真实坐标点击**（page.mouse.click），不能用 el.click()。
+// el.click() 直接派发事件，绕过浏览器的命中测试，会把「有遮罩层盖在正文上」这种
+// 致命 bug 全部放过去 —— 2026-10-19 就踩过一次：#d-sheet 的 `display:flex` 压过
+// `[hidden]`，全屏弹层一直盖着文章，人点不动，而 el.click() 版本 35/35 全绿。
+const clickTok = async (surface, count = 1) => {
+  const found = await page.evaluate((w) => {
+    const el = [...document.querySelectorAll('#d-article .tok')]
+      .find((x) => x.dataset.w.toLowerCase() === w);
+    if (!el) return false;
+    el.scrollIntoView({ block: 'center' });
+    return true;
+  }, surface);
+  if (!found) return { found: false, blocked: false };
 
-t('找到 scavengers', await clickTok('scavengers'));
+  await sleep(150);
+  const pos = await page.evaluate((w) => {
+    const el = [...document.querySelectorAll('#d-article .tok')]
+      .find((x) => x.dataset.w.toLowerCase() === w);
+    const r = el.getBoundingClientRect();
+    const cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+    const hit = document.elementFromPoint(cx, cy);
+    return { cx, cy, blocked: !(hit === el || el.contains(hit)) };
+  }, surface);
+
+  for (let i = 0; i < count; i++) await page.mouse.click(pos.cx, pos.cy);
+  return { found: true, blocked: pos.blocked };
+};
+
+const c0 = await clickTok('scavengers');
+t('找到 scavengers', c0.found);
+t('词没被遮挡层盖住（真实点击能命中）', c0.found && !c0.blocked);
 await sleep(500);
 
 let list = await page.evaluate(readWords);

@@ -8,6 +8,11 @@
 <title>今日共读 · 读原文</title>
 <link rel="stylesheet" href="../css/app.css">
 <style>
+  /* hidden 必须压过 ID 选择器里的 display。
+     #d-sheet / #d-tip 用了 `#id { display: flex }`，优先级高于浏览器对 [hidden] 的默认
+     `display: none`，结果 hidden 失效：#d-sheet 全屏盖在正文上，吃掉所有点击。 */
+  [hidden] { display: none !important; }
+
   html { font-size: 16px; }
   body {
     padding-bottom: 104px;
