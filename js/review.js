@@ -61,7 +61,6 @@ export async function startSession() {
   queueTotal = queue.length;
   queueDone = 0;
   current = null;
-  answered = false;
   return true;
 }
 
@@ -74,7 +73,6 @@ let queueDone = 0;
 export async function renderNextQuestion(cardBox) {
   if (!queue.length) return false;
   current = queue.shift();
-  answered = false;
   queueDone++;
 
   cardBox.innerHTML = '';
