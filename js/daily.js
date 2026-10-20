@@ -7,7 +7,8 @@
 //      在 /daily/ 下会 404。这里自己 fetch 再喂 initDict()，不改动 App 的代码。
 //   3. 不动 reader.js：它一被 import 就会拉起整套 TTS 初始化，这页不需要。
 
-import { el, TOKEN_RE, findSentence, highlightInSentence } from './util.js';
+import { el, TOKEN_RE, findSentence } from './util.js';
+import { buildWordCard } from './wordcard.js';
 import { words, kv } from './db.js';
 import { initDict, lookup } from './dict.js';
 
@@ -255,34 +256,27 @@ function showWord(raw) {
   const key = baseKey(raw);
   const rec = VOCAB.get(key);
   const entry = dictReady ? lookup(raw) : null;
-  const frag = document.createDocumentFragment();
-
-  const head = el('div', null, el('span', { class: 'sh-word' }, entry?.word || raw));
-  if (entry?.ph) head.append(el('span', { class: 'sh-ph' }, `/${entry.ph}/`));
-  if (entry?.tag) head.append(el('span', { class: 'sh-tag' }, entry.tag.toUpperCase()));
-  frag.append(head);
-
-  if (entry?.variant) {
-    frag.append(el('div', { class: 'sh-tag', style: 'margin:10px 0 0' }, `${entry.variant} 的原形`));
-  }
-  frag.append(el('div', { class: 'sh-tr' }, entry?.tr || '词典未收录（可能是专名或生造词）'));
-
   const sent = rec?.contexts?.[0]?.sentence || sentenceOf(raw);
-  if (sent) {
-    const [a, hit, b] = highlightInSentence(sent, baseKey(raw));
-    const ctx = el('div', { class: 'sh-ctx' });
-    if (a) ctx.append(a);
-    if (hit) ctx.append(el('em', null, hit));
-    if (b) ctx.append(b);
-    frag.append(ctx);
-  }
 
-  const acts = el('div', { class: 'sh-actions' });
-  acts.append(el('button', { onclick: () => speak(entry?.word || raw) }, '朗读'));
+  const { frag } = buildWordCard({
+    word: entry?.word || raw,
+    ph: entry?.ph,
+    tag: entry?.tag,
+    variant: entry?.variant,
+    tr: entry?.tr || '词典未收录（可能是专名或生造词）',
+    sentence: sent,
+  });
+
+  const acts = el('div', { class: 'wc-actions' });
+  acts.append(el('button', {
+    class: 'btn',
+    onclick: () => speak(entry?.word || raw),
+  }, '朗读'));
+
   if (rec) {
     const removable = rec.source === 'daily' && rec.day === DAY && !(rec.srs && rec.srs.reps > 0);
     acts.append(el('button', {
-      class: removable ? 'danger' : '',
+      class: 'btn' + (removable ? ' danger' : ''),
       onclick: async () => {
         if (!removable) { toast('已在复习队列里，去生词本页管理'); return; }
         await words.del(key);
@@ -294,7 +288,7 @@ function showWord(raw) {
     }, removable ? '移出生词本' : '已在生词本'));
   } else {
     acts.append(el('button', {
-      class: 'primary',
+      class: 'btn btn-primary',
       onclick: async () => { await toggleMark(raw); closeSheet(); },
     }, '加入生词本'));
   }

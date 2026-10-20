@@ -3,6 +3,7 @@ import { $, $$, el, TOKEN_RE, toast, fmtDate, findSentence, highlightInSentence,
 import { books, chapters, words, bookmarks, kv } from './db.js';
 import { lookup, inVocab, refreshVocabCache } from './dict.js';
 import { translateSentence } from './translate.js';
+import { buildWordCard } from './wordcard.js';
 import {
   Speaker, speakOnce, loadSettings, saveSettings, getSettings,
   resolveVoice, hasAiVoice, hasCloudVoice, isDegraded, ready as ttsReady,
@@ -199,44 +200,25 @@ async function showWordSheet(word, paraText) {
   const body = $('#sheet-body');
   body.innerHTML = '';
 
-  if (!entry) {
-    body.append(el('div', { class: 'w-notfound' },
-      el('div', { class: 'w-word' }, word),
-      el('p', null, '词典未收录（人名/地名或拼写变体）'),
-      el('button', { class: 'btn', onclick: () => speak(word) }, '朗读'),
-    ));
-  } else {
-    const head = el('div', { class: 'w-head' },
-      el('span', { class: 'w-word' }, entry.word),
-      entry.ph ? el('span', { class: 'w-ph' }, '/' + entry.ph + '/') : null,
-      entry.tag ? el('span', { class: 'w-tag' }, entry.tag.toUpperCase()) : null,
-    );
-    body.append(head);
-
-    const trBox = el('div', { class: 'w-tr' });
-    for (const line of entry.tr.split('\n')) {
-      trBox.append(el('span', { class: 'tr-line' }, line));
-    }
-    body.append(trBox);
-
-    if (entry.variant) {
-      body.append(el('div', { class: 'w-senses' }, `${entry.variant} → 原形 ${entry.word}`));
-    }
-    if (entry.frq && entry.frq < 90000) {
-      body.append(el('div', { class: 'w-frq' }, `词频排名约 #${entry.frq}`));
-    }
-  }
-
-  // 语境句
   const sent = findSentence(paraText, word);
-  if (sent) {
-    const [a, hit, b] = highlightInSentence(sent, word);
-    const ctx = el('div', { class: 'w-ctx' }, a,
-      hit ? el('span', { class: 'hl' }, hit) : null, b);
+  const { frag, ctx } = buildWordCard({
+    word: entry?.word || word,
+    ph: entry?.ph,
+    tag: entry?.tag,
+    variant: entry?.variant,
+    tr: entry ? entry.tr : '词典未收录（人名 / 地名 / 拼写变体）',
+    frq: entry?.frq,
+    sentence: sent,
+    source: currentBook?.title,
+  });
+  body.append(frag);
+
+  // 整句翻译只在书架页有（每日页为省流量不做），按钮挂进语境块
+  if (ctx && sent) {
     const trBtn = el('button', {
       class: 'btn-ghost w-ctx-tr-btn',
       onclick: async (e) => {
-        const btn = e.target;
+        const btn = e.currentTarget;
         btn.disabled = true;
         btn.textContent = '翻译中…';
         try {
@@ -259,12 +241,11 @@ async function showWordSheet(word, paraText) {
       },
     }, '译句');
     ctx.append(trBtn);
-    body.append(ctx);
   }
 
   // 动作按钮
   const saved = await words.get(word.toLowerCase());
-  const actions = el('div', { class: 'w-actions' });
+  const actions = el('div', { class: 'wc-actions' });
   actions.append(el('button', { class: 'btn btn-primary', onclick: async () => {
     await addWord(word, sent);
     openSheet(false);

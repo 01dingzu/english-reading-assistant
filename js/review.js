@@ -1,7 +1,6 @@
-// review.js — SM-2 间隔复习 + 填空/听写两种题型
+// review.js — SM-2 间隔复习 + 语境填空
 import { $, el, toast, shuffle, highlightInSentence } from './util.js';
 import { words } from './db.js';
-import { speak } from './reader.js';
 
 const DAY = 86400000;
 
@@ -76,14 +75,15 @@ export async function renderNextQuestion(cardBox) {
   queueDone++;
 
   cardBox.innerHTML = '';
-  const useCloze = current.contexts?.length && Math.random() < 0.6;
-  const mode = useCloze ? '语境填空' : '听音拼写';
+  // 只保留一种题型：语境填空。
+  // 「听音拼写」考的是能不能把音还原成字母，属于输出训练，和读速不是一条线；
+  // 混在同一轮里会让人在「看一眼就懂」和「从零拼」之间反复颠簸。
+  const hasCtx = !!current.contexts?.length;
+  cardBox.append(el('span', { class: 'rv-mode' }, hasCtx ? '语境填空' : '释义提示'));
 
-  cardBox.append(el('span', { class: 'rv-mode' }, mode));
-
-  if (useCloze) {
+  if (hasCtx) {
     const ctx = current.contexts[current.contexts.length - 1];
-    const [a, hit, b] = highlightInSentence(ctx.sentence, current.word);
+    const [a, , b] = highlightInSentence(ctx.sentence, current.word);
     const line = el('div', { class: 'rv-sentence' });
     if (a) line.append(a);
     line.append(el('span', { class: 'rv-blank' }, '＿＿＿'));
@@ -93,15 +93,10 @@ export async function renderNextQuestion(cardBox) {
       style: 'font-size:12px;color:var(--ink-3);margin-top:10px',
     }, ctx.bookTitle ? '出自《' + ctx.bookTitle + '》' : ''));
   } else {
-    cardBox.append(el('p', { class: 'rv-sentence' }, '听发音，拼写单词'));
-    cardBox.append(el('button', {
-      class: 'btn rv-play', onclick: () => speak(current.word),
-    }, '▶ 播放'));
-    if (current.contexts?.length) {
-      cardBox.append(el('p', {
-        style: 'font-size:12px;color:var(--ink-3);margin-top:10px',
-      }, '提示：' + current.contexts[current.contexts.length - 1].sentence.slice(0, 40) + '…'));
-    }
+    // 少数词取不到原句（专名、或书架里点的词段落太碎）：
+    // 给中文释义 + 首字母，仍然要求写出英文。不朗读——出声就等于把答案念出来了。
+    cardBox.append(el('div', { class: 'rv-sentence' }, (current.tr || '（无释义）').split('\n')[0]));
+    cardBox.append(el('p', { class: 'rv-hint' }, firstLetterHint(current.word)));
   }
 
   const input = el('input', {
@@ -110,9 +105,13 @@ export async function renderNextQuestion(cardBox) {
   });
   cardBox.append(input);
   input.focus();
-
-  if (!useCloze) setTimeout(() => speak(current.word), 300);
   return true;
+}
+
+function firstLetterHint(word) {
+  const w = String(word || '');
+  if (w.length <= 2) return `以 ${w.slice(0, 1)} 开头`;
+  return `提示：${w[0]}${' _'.repeat(w.length - 1)}  （${w.length} 个字母）`;
 }
 
 export function normalize(s) {

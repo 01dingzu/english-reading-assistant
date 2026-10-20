@@ -1,5 +1,5 @@
 // flashcards.js — 生词本闪卡模式：正面单词 → 翻面看释义/语境 → 自评喂 SM-2
-import { $, el, toast, shuffle, highlightInSentence } from './util.js';
+import { $, el, shuffle, highlightInSentence } from './util.js';
 import { words } from './db.js';
 import { grade, initSrs, statusOf } from './review.js';
 import { speak } from './reader.js';
@@ -11,26 +11,37 @@ const FILTERS = {
   mastered: r => statusOf(r) === 'mastered',
 };
 
+const FLASH_MAX = 8;   // 单轮上限：与复习页「新词最多 8 个」对齐，避免一次连翻二十几张
+
 let queue = [];
 let total = 0;
 let done = 0;
 let current = null;
 let flipped = false;
 let box = null;        // 卡片容器（.flash-card）
-let activeFilter = 'all';
+let activeFilter = 'new';
+let emptyReason = 'none';   // 'none' | 'empty'（生词本空）| 'no-new'（新词刷完了）
 
 export async function startFlashSession(filter) {
-  activeFilter = filter || 'all';
+  // 闪卡只负责「新词首刷」。到期复习交给复习页，两条线不重叠。
+  activeFilter = filter || 'new';
   const all = await words.all();
   const list = all.filter(FILTERS[activeFilter] || FILTERS.all);
-  if (!list.length) { toast('这个分类下还没有生词'); return false; }
-  queue = shuffle(list);
+  if (!list.length) {
+    emptyReason = all.length ? 'no-new' : 'empty';
+    return false;
+  }
+  emptyReason = 'none';
+  queue = shuffle(list).slice(0, FLASH_MAX);
   total = queue.length;
   done = 0;
   current = null;
   flipped = false;
   return true;
 }
+
+/** 上一轮为什么没起来，让 UI 决定空态文案 */
+export function flashEmptyReason() { return emptyReason; }
 
 export function flashInfo() {
   return { total, done };

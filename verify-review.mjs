@@ -73,7 +73,7 @@ const started = await page.evaluate(() => ({
 t('点击后会话区显示、首页隐藏', started.homeHidden === true && started.sessionHidden === false, started);
 t('出了第一道题（有输入框）', started.hasInput === true);
 t('计数器为 1 / N', /^1 \/ \d+$/.test(started.counter), started.counter);
-t('题型标签是「语境填空」或「听音拼写」', /语境填空|听音拼写/.test(started.mode), started.mode);
+t('题型只出语境填空（听音拼写已移除）', /语境填空|释义提示/.test(started.mode) && !/听音|拼写/.test(started.mode), started.mode);
 t('新词超过 8 个时单轮被截断（N ≤ 20）', Number(started.counter.split('/')[1].trim()) <= 20, started.counter);
 
 // ---- 4. 故意答错 → 应显示正确答案 + 三个自评键 ----

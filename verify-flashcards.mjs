@@ -20,12 +20,30 @@ await new Promise(r => setTimeout(r, 400));
 
 // 2. 直接向 IndexedDB 写入测试生词（绕过 UI，快速造数据）
 await page.evaluate(async () => {
+  // App 的 db.js 是异步建库的。如果这里抢先用 open('engreader') 且此刻库还不存在，
+  // 浏览器会建出一个「version 1、没有任何 store」的空库，随后 transaction('words')
+  // 直接抛 NotFoundError。所以先等到 words store 真的出现再写。
+  const waitForStore = async () => {
+    for (let i = 0; i < 60; i++) {
+      const db = await new Promise((res, rej) => {
+        const r = indexedDB.open('engreader');   // 不带版本号，避免 VersionError
+        r.onsuccess = () => res(r.result);
+        r.onerror = () => rej(r.error);
+      });
+      const ok = db.objectStoreNames.contains('words');
+      db.close();
+      if (ok) return;
+      await new Promise(r => setTimeout(r, 200));
+    }
+    throw new Error('words store 一直没出现：App 可能没启动完');
+  };
+  await waitForStore();
+
   const words = [
     { word: 'perceive', ph: 'pə\'siːv', tr: 'vt. 察觉，理解', createdAt: Date.now() - 86400000, contexts: [{ sentence: 'We perceive the world through our senses.', bookTitle: '示例书' }] },
     { word: 'famished', ph: '\'fæmɪʃt', tr: 'adj. 极饿的', createdAt: Date.now() - 86400000, contexts: [{ sentence: 'After the long hike we were famished.', bookTitle: '示例书' }] },
     { word: 'bleat', ph: 'bliːt', tr: 'vi. 咩咩叫', createdAt: Date.now(), contexts: [{ sentence: 'The lamb began to bleat.', bookTitle: '示例书' }] },
   ];
-  // 不带版本号 = 打开当前版本，避免与 db.js 的 DB_VER 冲突（VersionError）
   const req = indexedDB.open('engreader');
   await new Promise((res, rej) => { req.onsuccess = res; req.onerror = () => rej(req.error); });
   const db = req.result;

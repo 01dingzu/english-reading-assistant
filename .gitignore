@@ -29,3 +29,6 @@ _shots/
 
 # 代码审计探针（本地量渲染规模 / 字段完整性用）
 _audit_probe.mjs
+
+# 卡片截图脚本（本地看样式用）
+_shot-cards.mjs

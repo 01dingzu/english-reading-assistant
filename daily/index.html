@@ -163,27 +163,8 @@
     border: none; background: #F2F0E9; color: var(--ink-2);
     font-size: 17px; line-height: 1; cursor: pointer;
   }
-  .sh-word { font-family: var(--reader-font); font-size: 30px; line-height: 1.2; }
-  .sh-ph { font-size: 14px; color: var(--ink-3); margin-left: 8px; font-family: var(--ui-font); }
-  .sh-tag {
-    display: inline-block; font-size: 10px; letter-spacing: .04em;
-    padding: 2px 6px; border-radius: 4px; margin-left: 8px;
-    background: #F1EFE7; color: var(--ink-2); vertical-align: middle;
-  }
-  .sh-tr { margin-top: 12px; font-size: 14.5px; line-height: 1.72; color: var(--ink); white-space: pre-line; }
-  .sh-ctx {
-    margin-top: 14px; padding: 12px 14px; border-radius: 10px;
-    background: #FCFAF4; border: 0.5px solid var(--line);
-    font-family: var(--reader-font); font-size: 15px; line-height: 1.7; color: var(--ink-2);
-  }
-  .sh-ctx em { font-style: normal; background: var(--warn-soft); color: var(--warn); padding: 0 2px; border-radius: 3px; }
-  .sh-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
-  .sh-actions button {
-    font-family: var(--ui-font); font-size: 13.5px;
-    padding: 9px 16px; border-radius: 9px;
-    border: 0.5px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer;
-  }
-  .sh-actions .danger { color: var(--danger); border-color: #F0D9D9; }
+  /* 查词卡样式已统一到 css/app.css（.wc-* 一组），渲染见 js/wordcard.js。
+     这里只留下清单空态，它只在「复制清单」弹层里用。 */
   .sh-empty { text-align: center; color: var(--ink-3); font-size: 13.5px; padding: 26px 0; line-height: 1.8; }
 
   .lg-title { font-size: 15px; font-weight: 600; margin-bottom: 4px; }

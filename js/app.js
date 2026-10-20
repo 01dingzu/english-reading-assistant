@@ -320,7 +320,17 @@ async function setWordsMode(mode) {
     $('#flash-empty').style.display = 'none';
     const ok = await flashcards.startFlashSession();
     if (!ok) {
-      $('#flash-empty').style.display = 'block';
+      // 空态分两种：生词本一条都没有，还是新词已经刷完了（后者该去复习页）
+      const hint = $('#flash-empty');
+      const [title, sub] = hint.querySelectorAll('p');
+      if (flashcards.flashEmptyReason() === 'no-new') {
+        title.textContent = '这轮新词刷完了';
+        sub.textContent = '到期的词去「复习」页，那里考语境填空';
+      } else {
+        title.textContent = '生词本还是空的';
+        sub.textContent = '先去阅读，点词加入生词本';
+      }
+      hint.style.display = 'block';
       return;
     }
     $('#flash-card').hidden = false;
@@ -332,7 +342,7 @@ async function nextFlashCard() {
   const card = $('#flash-card');
   const has = await flashcards.renderFlashCard(card);
   if (!has) {
-    toast('本组闪卡刷完 🎉');
+    toast('这批新词刷完了 🎉');
     $('#fc-quit').click();
     return;
   }

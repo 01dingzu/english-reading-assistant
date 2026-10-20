@@ -124,10 +124,10 @@ await clickTok('scavengers', 2);
 await sleep(400);
 const sh = await page.evaluate(() => ({
   open: document.querySelector('#d-sheet')?.hidden === false,
-  word: document.querySelector('.sh-word')?.textContent || '',
-  ph: document.querySelector('.sh-ph')?.textContent || '',
-  tr: (document.querySelector('.sh-tr')?.textContent || '').slice(0, 24),
-  ctx: (document.querySelector('.sh-ctx')?.textContent || '').slice(0, 30),
+  word: document.querySelector('.wc-word')?.textContent || '',
+  ph: document.querySelector('.wc-ph')?.textContent || '',
+  tr: (document.querySelector('.wc-tr')?.textContent || '').slice(0, 24),
+  ctx: (document.querySelector('.wc-ctx')?.textContent || '').slice(0, 30),
 }));
 t('双击打开释义弹层', sh.open, JSON.stringify(sh));
 t('弹层显示原形', sh.word === 'scavenger', sh.word);

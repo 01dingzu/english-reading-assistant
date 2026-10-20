@@ -233,23 +233,24 @@ body {
 }
 @keyframes slideUp { from { transform: translateY(40px); opacity: 0; } to { transform: none; opacity: 1; } }
 .sheet-grab { width: 36px; height: 4px; border-radius: 2px; background: var(--line); margin: 4px auto 14px; }
-.w-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
-.w-word { font-family: var(--reader-font); font-size: 24px; font-weight: 500; }
-.w-ph { font-size: 14px; color: var(--accent); font-family: var(--reader-font); }
-.w-tag { font-size: 11px; padding: 1px 8px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); }
-.w-tr { margin: 10px 0 4px; font-size: 15px; line-height: 1.7; }
-.w-tr .tr-line { display: block; }
-.w-frq { font-size: 11px; color: var(--ink-3); margin-top: 4px; }
-.w-ctx {
-  margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--accent);
-  background: var(--paper); border-radius: 0 8px 8px 0;
-  font-family: var(--reader-font); font-size: 14px; color: var(--ink-2);
+/* ---------- 查词卡（每日页 + 书架共用，渲染见 js/wordcard.js） ---------- */
+.wc-head { display: flex; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+.wc-word { font-family: var(--reader-font); font-size: 28px; font-weight: 500; line-height: 1.25; }
+.wc-ph { font-size: 14px; color: var(--accent); font-family: var(--reader-font); }
+.wc-tag { font-size: 11px; padding: 1px 8px; border-radius: 8px; background: var(--warn-soft); color: var(--warn); }
+.wc-variant { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+.wc-tr { margin-top: 12px; font-size: 15px; line-height: 1.72; white-space: pre-line; }
+.wc-frq { font-size: 11px; color: var(--ink-3); margin-top: 6px; }
+.wc-ctx {
+  margin-top: 14px; padding: 12px 14px; border-radius: 10px;
+  background: var(--paper); border: 0.5px solid var(--line);
+  font-family: var(--reader-font); font-size: 15px; line-height: 1.7; color: var(--ink-2);
 }
-.w-ctx .hl { color: var(--danger); font-weight: 500; }
-.w-actions { display: flex; gap: 10px; margin-top: 16px; }
-.w-actions .btn { flex: 1; }
-.w-notfound { padding: 20px 0; text-align: center; color: var(--ink-2); font-size: 14px; }
-.w-senses { font-size: 12px; color: var(--ink-3); margin-top: 8px; }
+.wc-hl { font-style: normal; color: var(--warn); background: var(--warn-soft); padding: 0 2px; border-radius: 3px; }
+.wc-src { margin-top: 8px; font-family: var(--ui-font); font-size: 11px; color: var(--ink-3); }
+.wc-actions { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+.wc-actions .danger { color: var(--danger); border-color: #F0D9D9; }
+.wc-notfound-hint { font-size: 13px; color: var(--ink-3); margin-top: 10px; }
 
 /* ---------- words list ---------- */
 .words-mode {
@@ -378,6 +379,11 @@ body {
   width: 100%; margin-top: 18px; font-size: 17px; font-family: var(--reader-font);
   padding: 10px 14px; border: 0.5px solid var(--line); border-radius: 8px;
   background: var(--surface); color: var(--ink); outline: none;
+}
+/* 无语境句时的「释义提示」：给中文 + 首字母，字距拉开方便数位 */
+.rv-hint {
+  margin-top: 12px; font-size: 13px; color: var(--ink-3);
+  letter-spacing: 0.06em; font-family: var(--ui-font);
 }
 .rv-input:focus { border-color: var(--accent); }
 .rv-play {
