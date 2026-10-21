@@ -1,0 +1,30 @@
+{
+  "day": 4,
+  "date": "2026-10-21",
+  "week": "W01",
+  "theme": "城市里的鸟",
+  "title": "The Warmest Block in Town",
+  "words": 512,
+  "density": 4.7,
+  "minutes": 8,
+  "before": [
+    "同一个五度：为什么在这座城市里，冬天的暖是救命的，夏天的暖却是致命的？",
+    "读的时候留意作者在哪一句把「暖」翻成了「险」——那应该是一句很短的话。"
+  ],
+  "paras": [
+    "A winter night in a city is warmer than a winter night outside it. Leave one thermometer in a downtown square and another on a hill twenty kilometres away, and the gap can be five degrees. Concrete and asphalt hold the heat of the day. Cars, furnaces and streetlights add more. On a map of temperature the warm centre looks like an island, and that is what it is called: the urban heat island.",
+    "For a bird, warmth is a resource. In cold weather a small body loses heat faster than it can eat, and every hour spent burning energy just to stay alive is an hour it cannot spend on anything else. A warm street is cheaper to survive. So birds gather where the heat is: pigeons on warm pavement, blackbirds crowding onto warm roofs at dusk. In some northern cities, species that used to fly south now stay all winter.",
+    "Warmth moves the map as well as the calendar. As the average night gets milder, the zone a species finds comfortable slides toward the poles, and birds follow it. On mountains the same thing happens upwards. Each degree of warming pushes a bird roughly a hundred and fifty metres higher to find the temperature it is used to. Where the slope ends, there is nowhere higher to go. This is the quiet half of warming: most ranges do not simply grow. They slide, and sliding has an edge.",
+    "Heat is not evenly a gift, either. Inside a single city the temperature changes block by block. A park with old trees stays cool while bare asphalt two streets away bakes. For a small bird on a hot afternoon, that gap decides whether the day is survivable. When researchers mapped sparrows across one summer, the birds were not thinning out where the city was warmest. They were thinning out where the city was warmest and offered no shade.",
+    "Warmth is a resource until it becomes a hazard.",
+    "In a cold snap, the warm blocks keep a population alive. In a heat wave, those same blocks are where birds die. The same five degrees carry opposite signs in January and July, and a city built for winter — sealed roofs, thick walls, dark surfaces — becomes a trap in summer. The birds do not experience \"the urban heat island.\" They experience a specific afternoon on a specific street.",
+    "There is a second habit worth dropping here. City wildlife is usually described as one package: animals that tolerate us. They are not. A species can be patient with noise, easy about people, and still lose badly in heat. Tolerance comes in separate parts, and the parts do not travel together.",
+    "So the city is not one habitat but a dozen small ones pressed into a few square kilometres. The warmest block is not the best block. What matters is where warmth, shade and food line up, and how long they stay lined up. Where they line up for a season, you find a nest. Where they keep lining up for a decade, you find a population."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "这篇的转折不在段落之间，在同一句话里——温度没变，符号变了。第 4 段末尾和第 5 段那句短句是全文的铰链。第一遍别停在 asphalt / furnace 这类信息名词上，先找到铰链。"
+}
