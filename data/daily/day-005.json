@@ -1,0 +1,28 @@
+{
+  "day": 5,
+  "date": "2026-10-22",
+  "week": "W01",
+  "theme": "城市里的鸟",
+  "title": "Ten Thousand Pairs of Eyes",
+  "words": 436,
+  "density": 5.3,
+  "minutes": 8,
+  "before": [
+    "同一份数据，让观察者「更准」和让观察者的错误「可计算」，哪一个更管用？读的时候留一句作者自己的答案。"
+  ],
+  "paras": [
+    "On a cold Saturday in December, a woman named Ruth stopped at the edge of a frozen pond and counted. Eleven ducks, two geese, one kingfisher. She wrote the numbers on a paper form, in pencil, with the wind fighting her hand. Then she drove eleven miles to the next pond and did it again.",
+    "Ruth was not a scientist. She was a retired schoolteacher with a pair of binoculars and a habit. But that morning she was one of sixty thousand people doing the same thing across the country, following the same route they had followed for thirty years.",
+    "For most of the last century, this kind of counting was treated as a hobby — pleasant, harmless, and not quite data. A professional survey could cover a few hundred sites. A continent has millions. No research budget could buy the coverage that a few thousand amateurs produced for free, and for a long time nobody knew what to do with it.",
+    "The problem was not the number of records. It was their shape. Volunteers count where they like to walk. They stop at the pretty pond and drive past the drained field. They notice the rare bird and overlook the twelfth sparrow. A professional picks sites by design; a volunteer picks them by preference. Put the two together and the errors do not cancel out — they pile up in the same direction.",
+    "So the scientists changed the question. Instead of asking whether the volunteers were accurate, they asked how the volunteers were wrong. If birders consistently skip industrial land, you can measure the size of that skip and correct for it. The answer was not to trust the observers more. It was to describe their bias precisely enough to subtract it.",
+    "Once that worked, the records became something new. One winter count says little; thirty winters in the same place say a great deal. When the same route is walked in the same week for decades, an amateur habit turns into a trend line — and the trend line was not what anyone expected. The birds in trouble were rarely the famous ones. Eagles recovered. The ordinary birds of grassland and field, the meadowlarks and bobolinks that nobody drives across a county to see, were quietly declining. Only the long, dull, repetitive counts were placed to notice.",
+    "Ruth's pencil marks from that December morning are now one row in a dataset of a hundred million. Nobody will ever read her handwriting again. But the row is doing the work she could not do alone. It is arguing, slowly, that the common bird is the one worth watching."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "这篇的机关在承不承认「人不可靠」。前面四段都在铺陈业余记录有多不整齐，第 5 段才翻——作者没让观察者变专业，他让错误变成了一个可以度量的量。第 5 段那两句短句是全文的铰链，别停在第 4 段那串「漂亮的池塘 / 抽干的田」的例子上。kingfisher / meadowlark / bobolink 三个鸟名各只出现一次，是路牌，跳过。"
+}
