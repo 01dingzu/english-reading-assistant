@@ -6,7 +6,7 @@
   "title": "The Bird That Can Hear the Hill Fall Apart",
   "words": 437,
   "density": 4.8,
-  "minutes": 11,
+  "minutes": 8,
   "before": [
     "一台水下麦克风，和一个学生每年夏天去数一次，哪一个的证据更硬？读完给个答案。"
   ],
@@ -21,6 +21,10 @@
     "Still, the record is longer than any person's attention. A graduate student can spend three summers on one valley. A hydrophone can spend five years there without getting tired, and it does not mind the cold.",
     "The team's conclusion was quiet, and it was not about frogs in particular. Some things in nature are not hard to measure because they are rare. They are hard to measure because we keep showing up to look and then leaving again."
   ],
-  "after": [],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
   "note": "机关在最后两段转：作者先说这套方法的两个代价（认不出个体、设备一坏就有空档），再在第 7 段把尺度换掉——比较的不是谁更准，是谁能待得更久。最后一段的 rare 是坑：真正的原因不是「稀有」，是「我们总是来了又走」。"
 }
