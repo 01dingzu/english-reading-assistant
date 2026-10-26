@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FAF9F5">
+<link rel="icon" href="data:,">
+<title>补齐生词 · 补词包</title>
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  /* `#id { display: ... }` 会压过 [hidden] 的默认 display:none，这里统一兜底，
+     否则加载区/结果区会同时露出来（daily 页踩过同一个坑）。 */
+  [hidden] { display: none !important; }
+
+  html { font-size: 16px; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--ui-font);
+    -webkit-text-size-adjust: 100%;
+  }
+  .c-wrap { max-width: 640px; margin: 0 auto; padding: 18px 18px 60px; }
+
+  .c-top {
+    display: flex; align-items: center; gap: 12px;
+    margin-bottom: 22px;
+  }
+  .c-back {
+    flex: none; width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; text-decoration: none;
+    font-size: 15px; color: var(--ink-2);
+    background: var(--surface); border: 0.5px solid var(--line);
+  }
+  .c-back:active { background: var(--accent-soft); color: var(--accent); }
+  .c-title { font-size: 17px; font-weight: 500; }
+
+  .c-lead {
+    font-family: var(--reader-font); font-size: 15px; line-height: 1.75;
+    color: var(--ink-2); margin: 0 0 22px;
+  }
+
+  .c-stats { display: flex; gap: 10px; margin-bottom: 20px; }
+  .c-stat {
+    flex: 1; padding: 14px 12px; border-radius: 12px;
+    background: var(--surface); border: 0.5px solid var(--line);
+    text-align: center;
+  }
+  .c-stat b { display: block; font-size: 22px; font-weight: 500; line-height: 1.2; }
+  .c-stat span { font-size: 11.5px; color: var(--ink-3); }
+  .c-stat.is-new b { color: var(--accent); }
+
+  .c-group { margin-bottom: 18px; }
+  .c-group h3 {
+    font-size: 12px; font-weight: 500; letter-spacing: .04em;
+    color: var(--ink-3); margin: 0 0 8px; text-transform: none;
+  }
+  .c-word {
+    display: flex; align-items: baseline; gap: 10px;
+    padding: 9px 12px; border-radius: 9px;
+    background: var(--surface); border: 0.5px solid var(--line);
+    margin-bottom: 6px;
+  }
+  .c-word .w {
+    font-family: var(--reader-font); font-size: 15.5px; min-width: 108px;
+  }
+  .c-word .p { font-size: 12px; color: var(--ink-3); font-family: var(--reader-font); }
+  .c-word .t {
+    font-size: 12.5px; color: var(--ink-2); flex: 1;
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+  .c-word.is-have { opacity: .5; }
+  .c-word.is-have .w::after {
+    content: '已有'; font-size: 10px; font-family: var(--ui-font);
+    color: var(--ink-3); margin-left: 6px;
+  }
+
+  .c-btn {
+    width: 100%; padding: 14px; border-radius: 11px; border: none;
+    font-family: var(--ui-font); font-size: 15px; cursor: pointer;
+    background: var(--accent); color: #fff;
+  }
+  .c-btn:disabled { opacity: .5; cursor: default; }
+  .c-btn.ghost {
+    background: var(--surface); color: var(--ink);
+    border: 0.5px solid var(--line); margin-top: 10px;
+  }
+  .c-btn.ghost:active { background: var(--accent-soft); }
+
+  .c-hint { font-size: 12.5px; color: var(--ink-3); line-height: 1.7; margin-top: 14px; }
+  .c-done-box {
+    padding: 20px; border-radius: 12px; text-align: center;
+    background: var(--surface); border: 0.5px solid var(--line);
+  }
+  .c-done-box b { font-size: 26px; font-weight: 500; color: var(--accent); }
+  .c-done-box p { font-size: 13.5px; color: var(--ink-2); margin: 8px 0 0; }
+  .c-err { color: var(--danger); font-size: 13.5px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="c-wrap">
+  <div class="c-top">
+    <a class="c-back" href="../#/words" aria-label="返回生词本">←</a>
+    <span class="c-title">补齐生词</span>
+  </div>
+
+  <p class="c-lead">
+    这一周的文章里，我每篇都挑了 8~12 个值得记的词。你读的时候点了其中一部分，
+    剩下的在这里。点一下按钮就全部存进生词本，已经有的自动跳过。
+  </p>
+
+  <div id="c-loading" class="c-hint">正在读取词库…</div>
+  <div id="c-error" class="c-err" hidden></div>
+
+  <div id="c-body" hidden>
+    <div class="c-stats">
+      <div class="c-stat"><b id="c-total">0</b><span>补词包</span></div>
+      <div class="c-stat is-new"><b id="c-new">0</b><span>将新增</span></div>
+      <div class="c-stat"><b id="c-have">0</b><span>已在库</span></div>
+    </div>
+
+    <div id="c-list"></div>
+
+    <button id="c-go" class="c-btn">导入</button>
+    <p class="c-hint" id="c-note"></p>
+  </div>
+
+  <div id="c-done" hidden>
+    <div class="c-done-box">
+      <b id="c-added">0</b>
+      <p>个词已存进生词本</p>
+    </div>
+    <button id="c-flash" class="c-btn" style="margin-top:16px">开始刷闪卡</button>
+    <a class="c-btn ghost" href="../#/words" style="display:block;text-align:center;text-decoration:none;line-height:1.4;box-sizing:border-box">回生词本看看</a>
+    <p class="c-hint">新词会按每轮 8 个进闪卡，刷完一轮自动进入下一次。想再来补的时候，重新打开这个页面就行。</p>
+  </div>
+</div>
+<script type="module" src="./catchup.js"></script>
+</body>
+</html>

@@ -1,0 +1,11 @@
+{
+  "packs": [
+    {
+      "file": "day1-6.json",
+      "label": "W01 · 第 1-6 篇",
+      "from": 1,
+      "to": 6,
+      "count": 27
+    }
+  ]
+}
