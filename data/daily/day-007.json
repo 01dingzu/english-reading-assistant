@@ -1,0 +1,28 @@
+{
+  "day": 7,
+  "date": "2026-10-26",
+  "week": "W02",
+  "theme": "迁徙·导航",
+  "title": "Three Compasses and No Map",
+  "words": 523,
+  "density": 5.5,
+  "minutes": 8,
+  "before": [
+    "一只幼鸟第一次出发，罗盘一刻没坏过，最后却到了错误的地方。你猜它缺的是什么——方向，还是别的？读完验证一下。"
+  ],
+  "paras": [
+    "Three Compasses and No Map",
+    "Every autumn, a bird that weighs less than twenty grams leaves a forest in Canada and flies toward South America. It travels alone, mostly at night, across thousands of kilometers of land and open sea. Nobody shows it the route. Its parents left weeks earlier, and no adult travels with it. Yet each year the species arrives at the same wintering grounds, in the right countries, on the right coasts. The hard question is not whether such a small body can fly that far. The hard question is how it knows which way to face.",
+    "The first answer came from cages. In the 1960s, researchers kept European robins inside through the winter, and every spring the birds grew restless and pushed themselves against one side of the cage - the side pointing toward where they would migrate. When the researchers surrounded them with wire that created a magnetic field and switched it around, the birds turned and pushed the other way. They were reading the earth's magnetism. A compass was built into a body that weighs less than a letter.",
+    "But a compass is a strange tool to travel with, because it tells you only one thing: which way you are facing. It cannot tell you where you are. The magnetic field is nearly the same over a forest, a desert, or the open ocean. So a migrating bird needs more than one instrument, and it has them. By day there is the sun, and behind the sun an internal clock that corrects for its movement across the sky. Move a bird's clock with artificial light, and it aims by the sun as if the day were a different hour.",
+    "The third compass is in the sky at night. An American biologist raised young indigo buntings inside a planetarium, with the stars projected onto the ceiling above them. Birds that had watched the real sky when they were young headed toward the projected south in autumn. Birds raised without any view of the sky never learned. The stars are not born into them; the slow turning of the sky is, and each bird learns the pattern the way we learn a face.",
+    "So the bird holds three compasses at once, and it calibrates them against each other. The color of the evening sky acts as a cue that resets the magnetic one; the magnetic one holds the bearing when clouds wipe out the stars. On a fully overcast night, with neither sun nor stars in sight, migrating birds still pass over in their usual directions.",
+    "And here is the part I find strange. An old experiment caught starlings on their normal route and released them hundreds of miles to the east, well off course. The adults corrected within a day and reached their usual wintering grounds. The young, on their first journey, kept their instinctive heading and arrived somewhere else entirely. Their compasses had worked perfectly from the first minute. What the young birds lacked was not direction. It was the experience that turns a direction into a route. Instinct installs the compass. Only the miles draw the map."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "机关在两处：第 3 段先立「罗盘只告诉你朝向、不告诉你在哪」这个空档，第 6 段的椋鸟实验把它砸实——幼鸟罗盘全程完美，缺的是经验把方向变成路线。最后一句是全文的支点：Instinct installs the compass. Only the miles draw the map. 三套罗盘互相校准（calibrate / cue）是第二层，别让注意力全花在磁场上。"
+}
