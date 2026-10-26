@@ -123,7 +123,9 @@ function route() {
   } else if (page === 'words') {
     $('#view-words').classList.add('active');
     $('#page-title').textContent = '生词本';
-    if (wordsMode === 'flash') setWordsMode('flash');
+    // #/words/flash 直达闪卡（可收藏 / 可分享），#/words 走列表
+    if (arg === 'flash') setWordsMode('flash');
+    else if (wordsMode === 'flash') setWordsMode('flash');
     else renderWords();
   } else if (page === 'review') {
     $('#view-review').classList.add('active');
@@ -271,9 +273,14 @@ function bindShelfUI() {
 // ---------- 生词本 ----------
 function bindWordsUI() {
   // 模式切换：列表 / 闪卡
-  $('#btn-mode-list').onclick = () => setWordsMode('list');
+  // 退出闪卡时把 #/words/flash 复位，否则刷新会又跳回闪卡
+  const toList = () => {
+    if (location.hash.startsWith('#/words/flash')) history.replaceState(null, '', '#/words');
+    setWordsMode('list');
+  };
+  $('#btn-mode-list').onclick = toList;
   $('#btn-mode-flash').onclick = () => setWordsMode('flash');
-  $('#fc-quit').onclick = () => setWordsMode('list');
+  $('#fc-quit').onclick = toList;
 
   // 闪卡：点卡片翻面
   $('#flash-card').onclick = () => {

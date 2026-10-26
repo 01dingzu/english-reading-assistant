@@ -147,6 +147,19 @@ const finalState = await page.evaluate(() => {
 });
 t('队列刷完自动回到列表模式', finalState.listActive && finalState.flashPanelHidden);
 
+// 9. 直达路由：#/words/flash 应自动进入闪卡模式（方便收藏 / 分享）
+await page.goto(PAGE_URL + '#/words/flash', { waitUntil: 'networkidle2', timeout: 30000 });
+await removeGuide(page);
+await page.waitForFunction(() => !document.querySelector('#words-panel-flash')?.hidden, { timeout: 15000 }).catch(() => {});
+const directState = await page.evaluate(() => ({
+  flashActive: document.querySelector('#btn-mode-flash')?.classList.contains('active'),
+  flashPanelVisible: !document.querySelector('#words-panel-flash')?.hidden,
+  listPanelHidden: document.querySelector('#words-panel-list')?.hidden,
+  hash: location.hash,
+}));
+t('#/words/flash 直达闪卡（无需手动切模式）',
+  directState.flashActive && directState.flashPanelVisible && directState.listPanelHidden, directState.hash);
+
 // 截图留档
 await page.evaluate(() => { location.hash = '#/words'; });
 await page.click('#btn-mode-flash');
