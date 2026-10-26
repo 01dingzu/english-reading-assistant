@@ -60,6 +60,9 @@ async function boot() {
   // 3.5 语音层：读设置、绑跟读控制条、等音色列表就绪（后台进行，不阻塞阅读）
   initTts().catch(e => console.error(e));
 
+  // 3.6 本地存储加固 + 备份状态
+  refreshBackupStatus().catch(e => console.error(e));
+
   try {
     const seeded = await kv.get('seeded');
     if (!seeded) {
@@ -357,6 +360,56 @@ async function nextFlashCard() {
   $('#fc-counter').textContent = `${info.done} / ${info.total}`;
 }
 
+// ---------- 本地存储：持久化申请 + 备份状态 ----------
+// IndexedDB 默认是 best-effort：磁盘紧张时浏览器可以静默清掉整个站点的数据，
+// 不需要用户点「清除浏览数据」。persist() 之后变成 persistent，只有用户主动清站点数据才会丢。
+// 首次申请可能被拒（浏览器按站点使用习惯判断），拒了不影响使用，只是要提醒定期导出。
+let _persistState = null;
+async function ensurePersistent() {
+  if (_persistState) return _persistState;
+  try {
+    if (!navigator.storage || !navigator.storage.persisted) { _persistState = 'unsupported'; return _persistState; }
+    if (await navigator.storage.persisted()) { _persistState = 'persisted'; return _persistState; }
+    const ok = await navigator.storage.persist();
+    _persistState = ok ? 'persisted' : 'best-effort';
+  } catch {
+    _persistState = 'best-effort';
+  }
+  return _persistState;
+}
+
+async function refreshBackupStatus() {
+  const box = $('#backup-status');
+  const mode = await ensurePersistent();
+  let last = null;
+  try { last = await kv.get('backup.lastExport'); } catch { /* 读不到就当没备份过 */ }
+
+  const parts = [];
+  let warn = false;
+  if (mode === 'persisted') {
+    parts.push('本地存储已获保护');
+  } else if (mode === 'unsupported') {
+    parts.push('浏览器不支持存储保护');
+    warn = true;
+  } else {
+    parts.push('本地存储未获保护，磁盘紧张时可能被清理');
+    warn = true;
+  }
+
+  if (last) {
+    const days = Math.floor((Date.now() - last) / 86400000);
+    parts.push(days <= 0 ? '上次备份：今天' : `上次备份：${days} 天前`);
+    if (days >= 14) warn = true;
+  } else {
+    parts.push('还没备份过');
+    warn = true;
+  }
+
+  if (!box) return;
+  box.textContent = parts.join(' · ');
+  box.classList.toggle('warn', warn);
+}
+
 // 导出：生词（含复习进度）+ 各书阅读进度 + 书签 + 字号偏好
 async function exportBackup() {
   try {
@@ -381,6 +434,9 @@ async function exportBackup() {
     a.download = `engreader-backup-${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}.json`;
     a.click();
     URL.revokeObjectURL(a.href);
+    // 记一笔导出时间，生词本底部会显示「上次备份 X 天前」
+    await kv.set('backup.lastExport', Date.now()).catch(() => {});
+    refreshBackupStatus().catch(() => {});
     toast(`已导出 ${wordList.length} 个生词`);
   } catch (err) {
     console.error(err);

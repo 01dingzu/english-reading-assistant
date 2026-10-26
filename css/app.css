@@ -358,6 +358,8 @@ body {
   width: 100%; font-size: 11px; line-height: 1.6;
   color: var(--ink-3); margin: 0;
 }
+/* 存储未获保护 / 久未备份时提示得更明显一点 */
+.backup-hint.warn { color: var(--warn); }
 
 /* ---------- review ---------- */
 .review-stats { display: flex; gap: 10px; }

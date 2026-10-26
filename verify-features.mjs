@@ -135,4 +135,20 @@ const backupOk = await page.evaluate(async () => {
 });
 t('书签已持久化到 IndexedDB', backupOk === true, String(backupOk));
 
+// 11. 生词本底部必须显示「本地存储 / 上次备份」状态（未保护时要能看见提醒）
+await page.evaluate(() => { location.hash = '#/words'; });
+await sleep(700);
+const backupStatus = await page.evaluate(() => {
+  const box = document.querySelector('#backup-status');
+  return {
+    exists: !!box,
+    text: box?.textContent || '',
+    warn: box?.classList.contains('warn') || false,
+    persistSupported: !!(navigator.storage && navigator.storage.persist),
+  };
+});
+t('生词本显示本地存储状态', backupStatus.exists && backupStatus.text.length > 6, backupStatus.text);
+t('状态里含「备份」字样（能看出上次备份时间）', /备份/.test(backupStatus.text), backupStatus.text);
+t('浏览器支持 storage.persist（加固才有意义）', backupStatus.persistSupported === true);
+
 await finish({ browser, state });
