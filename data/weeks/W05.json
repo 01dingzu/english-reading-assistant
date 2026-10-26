@@ -1,0 +1,81 @@
+{
+  "week": "W05",
+  "status": "next",
+  "quarter": "I · 自然",
+  "theme": "鸟类 II",
+  "angle": "育雏与行为",
+  "defaultOption": "rearing",
+  "intro": "还是鸟，但换三个方向：育雏（怎么把下一代养大）、行为（它们能做什么）、种群（整体在往哪走）。三个候选都在，想换就点一张卡确认；不选就按育雏走。",
+  "wordfield": {
+    "verbs": ["incubate", "hatch", "fledge", "beg", "feed"],
+    "nouns": ["clutch", "brood", "nestling", "host", "sibling"],
+    "adjs": ["altricial", "precocial", "asynchronous", "dependent"]
+  },
+  "closing": [
+    "clutch / brood / nestling / fledgling：四个词各指哪一段？能不能按时间排一下？",
+    "这五篇里，哪一篇的结论最反直觉？反在哪一步？",
+    "host 和 parasitize 是一对：你能用一句话说清这场「军备竞赛」两边的处境吗？"
+  ],
+  "options": [
+    {
+      "id": "rearing",
+      "title": "鸟类 II · 育雏",
+      "kind": "自然",
+      "planned": "W05（原定）",
+      "oneLine": "从蛋到能自己找食，每一个决定都是取舍：下几个、谁先出壳、喂哪只、什么时候停手。",
+      "why": "W01 讲鸟怎么在城市里活下来，这周回到最脆弱的一段：繁殖。词族以「量」为主（clutch / brood / hatch / fledge），和 W01 的 habitat / adapt 形成互补。",
+      "angles": [
+        { "day": 1, "kicker": "认不出的蛋", "line": "杜鹃把蛋下在别人家。宿主有三道检查：蛋的样子、数量、时机。多数时候还是被骗。" },
+        { "day": 2, "kicker": "早成与晚成", "line": "鸭子出壳就能走，燕子得在窝里待三周。两种投资方式，对亲鸟的负担完全不同。" },
+        { "day": 3, "kicker": "谁先出壳", "line": "卵不同时孵化，先出来的个头大、抢得多，最后一只常常饿死。父母为什么不阻止。" },
+        { "day": 4, "kicker": "乞食声是谈判", "line": "雏鸟叫得越响要得越多；父母要把食给最可能活的那只。这场谈判没有一方满意。" },
+        { "day": 5, "kicker": "出巢之后", "line": "离巢不是结束，是死亡率最高的一段。父母还要喂几周，有的紧接着再孵一窝。" }
+      ],
+      "words": {
+        "verbs": ["incubate", "hatch", "fledge", "beg", "feed"],
+        "nouns": ["clutch", "brood", "nestling", "host", "sibling"],
+        "adjs": ["altricial", "precocial", "asynchronous", "dependent"]
+      }
+    },
+    {
+      "id": "behaviour",
+      "title": "鸟类 II · 特殊行为",
+      "kind": "自然 × 认知",
+      "planned": "同周备选",
+      "oneLine": "有些鸟做的事，放进人类的行为清单里也不算简单：做工具、记几千个藏点、十个月不落地。",
+      "why": "从育雏的「量」转到「能力」。核心词偏认知与运动（cache / manufacture / coordinate），是后面读科技类文章时最好用的那批。",
+      "angles": [
+        { "day": 1, "kicker": "做钩子的鸦", "line": "新喀鸦把树枝削成钩，还会把短棍接成长棍去够食物。这不是试错，是有次序的。" },
+        { "day": 2, "kicker": "三万颗种子的记忆", "line": "星鸦秋天把种子埋进几千个点，冬天一个个挖回来。海马体的大小和这件事有关。" },
+        { "day": 3, "kicker": "十个月不落地", "line": "普通雨燕迁徙期几乎全程在空中：睡觉、换羽、交配都在飞的时候完成。" },
+        { "day": 4, "kicker": "无声的飞行", "line": "猫头鹰前缘的锯齿把气流噪声吃掉。工程师模仿了很多年，还没完全做到。" },
+        { "day": 5, "kicker": "七只邻居", "line": "几万只椋鸟同时转向，每只只需盯住身边七只。规则极简，效果极复杂。" }
+      ],
+      "words": {
+        "verbs": ["cache", "manufacture", "soar", "hover", "coordinate"],
+        "nouns": ["tool", "memory", "flock", "feather", "neighbour"],
+        "adjs": ["spatial", "aerial", "silent", "social"]
+      }
+    },
+    {
+      "id": "population",
+      "title": "鸟类 II · 种群与环境",
+      "kind": "自然 × 数据",
+      "planned": "同周备选",
+      "oneLine": "一只鸟的命运看不出什么，几百万条记录放在一起，趋势就出来了——问题是这些记录怎么来的。",
+      "why": "这组最接政策与统计，会用到 index / trend / decline 这批词，也接上 W01 day-005 的「业余观察者」——这次看的是这些数据最后变成了什么结论。",
+      "angles": [
+        { "day": 1, "kicker": "四十年的路线", "line": "志愿者沿固定路线数鸟，零散目击因此变成可比的一条线。方法比结论更值得看。" },
+        { "day": 2, "kicker": "农田鸟少了一半", "line": "欧洲农田鸟 1980 年以来少了约一半。最陡的那段曲线不在森林，在农田。" },
+        { "day": 3, "kicker": "撞窗与关灯", "line": "迁徙夜里的城市光把鸟吸进来。关几层楼的灯，死亡率就变，成本几乎为零。" },
+        { "day": 4, "kicker": "春天提前了", "line": "斑姬鹟到的时候，它要吃的那批毛虫已经过去了。时间错位不响，但会一年年积累。" },
+        { "day": 5, "kicker": "最后一片滩涂", "line": "黄海填海，迁飞通道上的加油站消失。红腹滨鹬落地的时候，没有东西吃。" }
+      ],
+      "words": {
+        "verbs": ["survey", "decline", "disorient", "reclaim", "refuel"],
+        "nouns": ["index", "trend", "flyway", "stopover", "collision"],
+        "adjs": ["steep", "migratory", "artificial", "intensive"]
+      }
+    }
+  ]
+}

@@ -73,7 +73,7 @@ t('下周入口指向 ?week=3 且带 mode=start', review.nextHref === '?week=3&m
   `${review.nextHref} / ${review.nextTitle}`);
 
 // ---------- 周开始 ----------
-await page.goto(BASE + '?week=2', { waitUntil: 'networkidle2' });
+await page.goto(BASE + '?week=2&mode=start', { waitUntil: 'networkidle2' });
 await page.waitForFunction(() => !document.querySelector('#w-preview')?.hidden, { timeout: 15000 }).catch(() => {});
 
 const preview = await page.evaluate(() => ({
@@ -140,7 +140,8 @@ t('mode=start 强制走预告', forcedStart.preview, forcedStart.err);
 t('W02 有三个候选（本周开始）', forcedStart.opts === 3, forcedStart.opts);
 
 // 周五 14:00 提醒走 mode=review；这周一篇没读也要给回顾页，不能跳成预告
-await page.goto(BASE + '?week=2&mode=review', { waitUntil: 'networkidle2' });
+// W03 有详解文件但还没有文章 → 正好测「零篇」
+await page.goto(BASE + '?week=3&mode=review', { waitUntil: 'networkidle2' });
 await page.waitForFunction(() => !document.querySelector('#w-review')?.hidden || !document.querySelector('#w-error')?.hidden, { timeout: 15000 }).catch(() => {});
 const forcedReview = await page.evaluate(() => ({
   review: !document.querySelector('#w-review').hidden,
@@ -151,7 +152,7 @@ const forcedReview = await page.evaluate(() => ({
 t('mode=review 强制走回顾', forcedReview.review, forcedReview.err);
 t('零篇时给出平实文案而不是崩掉',
   /还没有阅读记录/.test(forcedReview.sub), forcedReview.sub);
-t('零篇时主题仍在（W02 迁徙）', /迁徙/.test(forcedReview.theme), forcedReview.theme);
+t('零篇时主题仍在（W03 大型哺乳动物）', /大型哺乳动物/.test(forcedReview.theme), forcedReview.theme);
 
 // ---------- 没有详细文件的周：退化成 52 周地图 ----------
 await page.goto(BASE + '?week=9&mode=start', { waitUntil: 'networkidle2' });
@@ -163,20 +164,40 @@ const fallback = await page.evaluate(() => ({
   note: document.querySelector('#p-intro')?.textContent || '',
 }));
 t('W09 没有详解文件也不 404', fallback.preview && !fallback.err, fallback.err);
-t('回落到 52 周地图的主题（板块 · 地震与山脉）',
-  /板块/.test(fallback.ttl) && /地震与山脉/.test(fallback.ttl), fallback.ttl);
+t('回落到周地图的主题（深海 · 光与压）',
+  /深海/.test(fallback.ttl) && /光与压/.test(fallback.ttl), fallback.ttl);
 t('明确说明详细预告还没写', /详细预告还没写/.test(fallback.note), fallback.note);
 
+// ---------- W05 鸟类 II：候选在，且不依赖 index.json 白名单 ----------
+await page.goto(BASE + '?week=5&mode=start', { waitUntil: 'networkidle2' });
+await page.waitForFunction(() => !document.querySelector('#w-preview')?.hidden || !document.querySelector('#w-error')?.hidden, { timeout: 15000 }).catch(() => {});
+const birds = await page.evaluate(() => ({
+  preview: !document.querySelector('#w-preview').hidden,
+  err: document.querySelector('#w-error')?.hidden === false ? document.querySelector('#w-error').textContent : '',
+  opts: document.querySelectorAll('.p-opt').length,
+  chosen: document.querySelector('.p-opt.on')?.dataset.id || '',
+  angles: document.querySelectorAll('.p-angle').length,
+  words: document.querySelectorAll('#p-words .r-chip').length,
+}));
+t('W05 鸟类 II 能打开（index.json 里没有它也行）', birds.preview && !birds.err, birds.err);
+t('三个方向：育雏 / 特殊行为 / 种群', birds.opts === 3, birds.opts);
+t('默认选中育雏', birds.chosen === 'rearing', birds.chosen);
+t('育雏展开五个切口', birds.angles === 5, birds.angles);
+t('育雏带核心词场', birds.words >= 10, birds.words);
+
 // ---------- 不带参数默认走 current ----------
+// current=W02 且已有第 7 篇 → 自动判为回顾；两种模式都算通过，只校验周号对
 await page.goto(BASE, { waitUntil: 'networkidle2' });
 await page.waitForFunction(
-  () => !document.querySelector('#w-preview')?.hidden || !document.querySelector('#w-error')?.hidden,
+  () => !document.querySelector('#w-preview')?.hidden || !document.querySelector('#w-review')?.hidden || !document.querySelector('#w-error')?.hidden,
   { timeout: 15000 }).catch(() => {});
 const dflt = await page.evaluate(() => ({
   preview: !document.querySelector('#w-preview').hidden,
-  kicker: document.querySelector('#p-kicker')?.textContent || '',
+  review: !document.querySelector('#w-review').hidden,
+  err: document.querySelector('#w-error').hidden ? '' : document.querySelector('#w-error').textContent,
+  text: (document.querySelector('#p-kicker')?.textContent || '') + (document.querySelector('#r-kicker')?.textContent || ''),
 }));
-t('不带参数时默认打开 current 周（W02）', dflt.preview && /W02/.test(dflt.kicker), dflt.kicker);
+t('不带参数时默认打开 current 周（W02）', (dflt.preview || dflt.review) && /W02/.test(dflt.text), `${dflt.text} err=${dflt.err}`);
 
 await page.screenshot({ path: 'C:/Users/liusiying/WorkBuddy/2026-10-19-14-26-33/_shot-week.png', fullPage: true });
 await finish({ browser, state });

@@ -241,9 +241,9 @@ async function renderPreview(week) {
 // 保证 weekly/?week=N 永远打得开（周一提醒不能发一个 404 出去）。
 async function loadWeek(want, idx) {
   const entry = (idx.weeks || []).find((w) => w.week === want);
-  if (entry) {
-    try { return await getJSON('../data/weeks/' + entry.file); } catch { /* 落到下面的兜底 */ }
-  }
+  // index 只是指针，不是白名单：直接按 Wxx.json 命名找文件，找不到才退到地图
+  const file = entry?.file || `${want}.json`;
+  try { return await getJSON('../data/weeks/' + file); } catch { /* 落到下面的兜底 */ }
   const plan = await getJSON('../data/weeks/plan.json').catch(() => null);
   const p = (plan?.weeks || []).find((x) => x.week === want);
   if (!p) throw new Error(`没有 ${want} 这一周的数据`);
@@ -255,11 +255,11 @@ async function loadWeek(want, idx) {
     angle: p.angle,
     quarter: p.quarter,
     defaultOption: 'planned',
-    intro: '这一周的详细预告还没写，先按 52 周地图上的原定主题。想读别的方向，跟我说一句就行。',
+    intro: '这一周的详细预告还没写，先按周地图上的原定主题。想读别的方向，跟我说一句就行。',
     options: [{
       id: 'planned',
       title,
-      kind: p.kind === 'rev' ? '复盘周' : '52 周地图',
+      kind: p.kind === 'rev' ? '复盘周' : '周地图',
       planned: '原定',
       oneLine: p.kind === 'rev' ? '这一周是复盘与测试，不按主题出新文章。' : '按原定计划出文章。想换方向就说一声。',
       angles: [],
