@@ -1,8 +1,21 @@
 {
   "week": "W02",
-  "status": "next",
+  "status": "reading",
+  "quarter": "I · 自然",
+  "theme": "迁徙",
+  "angle": "导航",
   "defaultOption": "migration",
-  "intro": "下周一个主题、五个切口。三个候选都写好了，你说一声就按你选的出文章；不选就按原计划走。",
+  "intro": "这一周一个主题、五个切口。三个候选都在，想换就点一张卡；不选就按原定走。",
+  "wordfield": {
+    "verbs": ["migrate", "navigate", "orient", "refuel", "depart"],
+    "nouns": ["instinct", "bearing", "flock", "stopover", "endurance"],
+    "adjs": ["magnetic", "seasonal", "exhausting", "instinctive"]
+  },
+  "closing": [
+    "migrate / navigate / orient 这三个词，你能不能不用中文说清它们的区别？",
+    "这五篇里，哪一篇你能用三句话讲给完全不懂鸟的人听？",
+    "有没有哪个词你在两篇以上见过、但还是说不准？"
+  ],
   "options": [
     {
       "id": "migration",

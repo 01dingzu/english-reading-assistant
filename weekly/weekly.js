@@ -1,10 +1,14 @@
 // weekly.js — 周回顾 / 周开始
 //
 // 两种模式走同一个页面：
-//   周数据 status=reading 且 index 里已有该周文章 → 回顾（汇总这一周读了什么 + 她的实际数据）
-//   否则 → 周开始（下周主题预告 + 三个候选，可换）
+//   带 &mode=review → 强制回顾（周五提醒用；这周一篇没读也照常显示）
+//   带 &mode=start  → 强制预告（周一提醒用；这周还没开工也照常显示）
+//   不带 mode       → 周数据 status=reading 且有文章就走回顾，否则走预告
+//
+// 周一提醒发本周、周五提醒发本周，两处用同一个周号；周号 = floor((今天-2026-10-19)/7)+1。
 //
 // 她的选择存在 kv `week.choice.W02`，我下次生成文章时读得到，据此决定出哪个主题。
+// 某一周还没写详细预告时，退化成 52 周地图上的原定主题（data/weeks/plan.json），链接不会 404。
 
 import { words, kv } from '../js/db.js';
 
@@ -45,8 +49,9 @@ async function renderReview(week, articles, nextWeek) {
 
   const dates = articles.map((a) => a.date).sort();
   const totalWords = articles.reduce((n, a) => n + (a.words || 0), 0);
-  $('#r-sub').textContent =
-    `${articles.length} 篇 · ${totalWords.toLocaleString()} 词 · ${fmtDate(dates[0])} — ${fmtDate(dates[dates.length - 1])}`;
+  $('#r-sub').textContent = articles.length
+    ? `${articles.length} 篇 · ${totalWords.toLocaleString()} 词 · ${fmtDate(dates[0])} — ${fmtDate(dates[dates.length - 1])}`
+    : '这周还没有阅读记录';
 
   // 她的数据：点词按 day 归组，wpm 从 kv read.timer.N 取
   let tapped = new Map();
@@ -80,7 +85,7 @@ async function renderReview(week, articles, nextWeek) {
 
   // 文章列表
   const angleOf = new Map((week.angles || []).map((a) => [a.day, a]));
-  $('#r-list').innerHTML = articles.map((a) => {
+  $('#r-list').innerHTML = articles.length ? articles.map((a) => {
     const t = timers.get(a.day);
     const ang = angleOf.get(a.day);
     const cnt = tapped.get(a.day) || 0;
@@ -95,7 +100,7 @@ async function renderReview(week, articles, nextWeek) {
         ${cnt ? cnt + ' 词' : ''}
       </span>
     </a>`;
-  }).join('');
+  }).join('') : '<p class="w-note">这周还没有记录。跳过也没关系，下周继续。</p>';
 
   // 词汇场：已收的高亮
   const field = week.wordfield || {};
@@ -122,9 +127,9 @@ async function renderReview(week, articles, nextWeek) {
     $('#r-close-block').hidden = true;
   }
 
-  // 下周入口
+  // 下周入口（强制走预告，避免那周刚开个头就变成半截回顾）
   if (nextWeek) {
-    $('#r-next').href = `?week=${Number(nextWeek.week.slice(1))}`;
+    $('#r-next').href = `?week=${Number(nextWeek.week.slice(1))}&mode=start`;
     const opt = (nextWeek.options || []).find((o) => o.id === nextWeek.defaultOption);
     $('#r-next-title').textContent = opt ? opt.title : '下周主题';
   } else {
@@ -139,7 +144,7 @@ async function renderReview(week, articles, nextWeek) {
 // ---------- 周开始 ----------
 async function renderPreview(week) {
   $('#w-crumb').textContent = '周开始';
-  $('#p-kicker').textContent = `${week.week} · 下周`;
+  $('#p-kicker').textContent = `${week.week} ${week.quarter ? '· ' + week.quarter : ''}`;
   $('#p-intro').textContent = week.intro || '';
 
   const options = week.options || [];
@@ -227,17 +232,47 @@ async function renderPreview(week) {
 
   $('#w-loading').hidden = true;
   $('#w-preview').hidden = false;
-  document.title = `${week.week} 周开始 · 下周主题`;
+  document.title = `${week.week} 周开始 · 主题选择`;
 }
 
 // ---------- 入口 ----------
+
+// 读某一周的数据。详细文件缺失时退化成 52 周地图上的原定主题，
+// 保证 weekly/?week=N 永远打得开（周一提醒不能发一个 404 出去）。
+async function loadWeek(want, idx) {
+  const entry = (idx.weeks || []).find((w) => w.week === want);
+  if (entry) {
+    try { return await getJSON('../data/weeks/' + entry.file); } catch { /* 落到下面的兜底 */ }
+  }
+  const plan = await getJSON('../data/weeks/plan.json').catch(() => null);
+  const p = (plan?.weeks || []).find((x) => x.week === want);
+  if (!p) throw new Error(`没有 ${want} 这一周的数据`);
+  const title = p.angle ? `${p.theme} · ${p.angle}` : p.theme;
+  return {
+    week: want,
+    status: 'planned',
+    theme: p.theme,
+    angle: p.angle,
+    quarter: p.quarter,
+    defaultOption: 'planned',
+    intro: '这一周的详细预告还没写，先按 52 周地图上的原定主题。想读别的方向，跟我说一句就行。',
+    options: [{
+      id: 'planned',
+      title,
+      kind: p.kind === 'rev' ? '复盘周' : '52 周地图',
+      planned: '原定',
+      oneLine: p.kind === 'rev' ? '这一周是复盘与测试，不按主题出新文章。' : '按原定计划出文章。想换方向就说一声。',
+      angles: [],
+    }],
+  };
+}
+
 async function boot() {
   try {
     const idx = await getJSON('../data/weeks/index.json');
     const want = normWeek(params.get('week')) || idx.current;
-    const entry = (idx.weeks || []).find((w) => w.week === want);
-    if (!entry) throw new Error(`没有 ${want} 这一周的数据`);
-    const week = await getJSON('../data/weeks/' + entry.file);
+    const week = await loadWeek(want, idx);
+    const mode = (params.get('mode') || '').toLowerCase();
 
     const dailyIdx = await getJSON('../data/daily/index.json');
     const articles = (dailyIdx.days || [])
@@ -245,9 +280,10 @@ async function boot() {
       .sort((a, b) => a.day - b.day);
 
     const nextEntry = (idx.weeks || []).find((w) => w.week === idx.next);
-    const nextWeek = nextEntry ? await getJSON('../data/weeks/' + nextEntry.file) : null;
+    const nextWeek = nextEntry ? await getJSON('../data/weeks/' + nextEntry.file).catch(() => null) : null;
 
-    if (week.status === 'reading' && articles.length) {
+    const toReview = mode === 'review' || (!mode && week.status === 'reading' && articles.length);
+    if (toReview) {
       await renderReview(week, articles, nextWeek);
     } else {
       await renderPreview(week);

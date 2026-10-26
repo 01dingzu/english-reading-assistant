@@ -69,7 +69,7 @@ t('已计时的篇显示 wpm（87 / 153）', review.wpms.includes('87 wpm') && r
 t('词汇场渲染出词条', review.chips >= 12, review.chips);
 t('已收的词被高亮（adapt/thrive/pigeon）', review.chipsHave >= 2, review.chipsHave);
 t('收尾问题有内容', review.closing >= 1, review.closing);
-t('下周入口指向 ?week=2 且带主题名', review.nextHref === '?week=2' && review.nextTitle.length > 0,
+t('下周入口指向 ?week=3 且带 mode=start', review.nextHref === '?week=3&mode=start' && /大型哺乳动物/.test(review.nextTitle),
   `${review.nextHref} / ${review.nextTitle}`);
 
 // ---------- 周开始 ----------
@@ -127,11 +127,56 @@ const echo = await page.evaluate(() => ({
 }));
 t('重新打开回显上次选择', echo.chosenId === 'citynight' && /上次选的是/.test(echo.hint), `${echo.chosenId} / ${echo.hint}`);
 
+// ---------- 提醒用的两个强制模式 ----------
+// 周一 10:00 提醒走 mode=start；即使这周还没开工也必须出预告
+await page.goto(BASE + '?week=2&mode=start', { waitUntil: 'networkidle2' });
+await page.waitForFunction(() => !document.querySelector('#w-preview')?.hidden || !document.querySelector('#w-error')?.hidden, { timeout: 15000 }).catch(() => {});
+const forcedStart = await page.evaluate(() => ({
+  preview: !document.querySelector('#w-preview').hidden,
+  err: document.querySelector('#w-error')?.hidden === false ? document.querySelector('#w-error').textContent : '',
+  opts: document.querySelectorAll('.p-opt').length,
+}));
+t('mode=start 强制走预告', forcedStart.preview, forcedStart.err);
+t('W02 有三个候选（本周开始）', forcedStart.opts === 3, forcedStart.opts);
+
+// 周五 14:00 提醒走 mode=review；这周一篇没读也要给回顾页，不能跳成预告
+await page.goto(BASE + '?week=2&mode=review', { waitUntil: 'networkidle2' });
+await page.waitForFunction(() => !document.querySelector('#w-review')?.hidden || !document.querySelector('#w-error')?.hidden, { timeout: 15000 }).catch(() => {});
+const forcedReview = await page.evaluate(() => ({
+  review: !document.querySelector('#w-review').hidden,
+  err: document.querySelector('#w-error')?.hidden === false ? document.querySelector('#w-error').textContent : '',
+  sub: document.querySelector('#r-sub')?.textContent || '',
+  theme: document.querySelector('#r-theme')?.textContent || '',
+}));
+t('mode=review 强制走回顾', forcedReview.review, forcedReview.err);
+t('零篇时给出平实文案而不是崩掉',
+  /还没有阅读记录/.test(forcedReview.sub), forcedReview.sub);
+t('零篇时主题仍在（W02 迁徙）', /迁徙/.test(forcedReview.theme), forcedReview.theme);
+
+// ---------- 没有详细文件的周：退化成 52 周地图 ----------
+await page.goto(BASE + '?week=9&mode=start', { waitUntil: 'networkidle2' });
+await page.waitForFunction(() => !document.querySelector('#w-preview')?.hidden || !document.querySelector('#w-error')?.hidden, { timeout: 15000 }).catch(() => {});
+const fallback = await page.evaluate(() => ({
+  preview: !document.querySelector('#w-preview').hidden,
+  err: document.querySelector('#w-error')?.hidden === false ? document.querySelector('#w-error').textContent : '',
+  ttl: document.querySelector('.p-opt .ttl')?.textContent || '',
+  note: document.querySelector('#p-intro')?.textContent || '',
+}));
+t('W09 没有详解文件也不 404', fallback.preview && !fallback.err, fallback.err);
+t('回落到 52 周地图的主题（板块 · 地震与山脉）',
+  /板块/.test(fallback.ttl) && /地震与山脉/.test(fallback.ttl), fallback.ttl);
+t('明确说明详细预告还没写', /详细预告还没写/.test(fallback.note), fallback.note);
+
 // ---------- 不带参数默认走 current ----------
 await page.goto(BASE, { waitUntil: 'networkidle2' });
-await page.waitForFunction(() => !document.querySelector('#w-review')?.hidden || !document.querySelector('#w-error')?.hidden, { timeout: 15000 }).catch(() => {});
-const dflt = await page.evaluate(() => !document.querySelector('#w-review')?.hidden);
-t('不带参数时默认打开 current 周（回顾）', dflt === true);
+await page.waitForFunction(
+  () => !document.querySelector('#w-preview')?.hidden || !document.querySelector('#w-error')?.hidden,
+  { timeout: 15000 }).catch(() => {});
+const dflt = await page.evaluate(() => ({
+  preview: !document.querySelector('#w-preview').hidden,
+  kicker: document.querySelector('#p-kicker')?.textContent || '',
+}));
+t('不带参数时默认打开 current 周（W02）', dflt.preview && /W02/.test(dflt.kicker), dflt.kicker);
 
 await page.screenshot({ path: 'C:/Users/liusiying/WorkBuddy/2026-10-19-14-26-33/_shot-week.png', fullPage: true });
 await finish({ browser, state });

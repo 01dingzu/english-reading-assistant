@@ -1,0 +1,71 @@
+{
+  "week": "W03",
+  "status": "next",
+  "quarter": "I · 自然",
+  "theme": "大型哺乳动物",
+  "angle": "象与鲸",
+  "defaultOption": "megafauna",
+  "intro": "这一周一个主题、五个切口。三个候选都写好了，想换就点一张卡确认；不选就按原定走。",
+  "options": [
+    {
+      "id": "megafauna",
+      "title": "大型哺乳动物 · 象与鲸",
+      "kind": "自然",
+      "planned": "W03（原定）",
+      "oneLine": "陆地上最大的动物在海里只能算中等。体型的天花板不是基因决定的，是物理。",
+      "why": "W02 讲迁徙的鸟，这周把尺度放大一级：同样在移动，象和鲸靠的是记忆、脂肪和声。词汇场从 instinct / bearing 换成 herd / lifespan / metabolism。",
+      "angles": [
+        { "day": 1, "kicker": "大到不能小", "line": "骨骼承重、散热面积、一天要吃多久。为什么陆地上最大的是象，而不是更大。" },
+        { "day": 2, "kicker": "象群的记忆", "line": "年长的雌象带路找水，靠的是几十年前旱季的路线。知识是一种遗产。" },
+        { "day": 3, "kicker": "鲸为什么能更大", "line": "水托住了体重，蓝鲸能长到陆生动物三倍。代价是必须一口吞下成群的磷虾。" },
+        { "day": 4, "kicker": "航道上的噪音", "line": "鲸的季节迁徙靠低频声音联系。船运把它们的交流距离压短了多少。" },
+        { "day": 5, "kicker": "巨型动物的代价", "line": "繁殖慢、一胎一个。栖息地一碎，先塌的不是数量，是象群的社会结构。" }
+      ],
+      "words": {
+        "verbs": ["forage", "graze", "migrate", "nurse", "trample"],
+        "nouns": ["herd", "ivory", "lifespan", "metabolism", "krill", "corridor"],
+        "adjs": ["enormous", "matriarchal", "endangered", "migratory"]
+      }
+    },
+    {
+      "id": "bat",
+      "title": "小型兽与夜行 · 蝙蝠",
+      "kind": "自然",
+      "planned": "原定 W04（可提前）",
+      "oneLine": "一个瞎子怎么在完全黑暗里抓住一只飞行的蛾子：它用声音画地图。",
+      "why": "从「大」跳到「小」。体型不同，夜里的生存策略完全不同。回声定位这一组词（echo / frequency / emit）在后面的科技类文章里还会反复出现。",
+      "angles": [
+        { "day": 1, "kicker": "用声音看世界", "line": "发出 20kHz 以上、听回波的时间差。频率越高分辨率越高，衰减也越快。" },
+        { "day": 2, "kicker": "为什么必须夜里出来", "line": "躲捕食者、抢昆虫的夜间高峰、避开白天那些鸟的竞争。" },
+        { "day": 3, "kicker": "冬眠里被叫醒", "line": "白鼻综合征：真菌让它们在冬天反复醒来，每次醒来烧掉几十天的脂肪。" },
+        { "day": 4, "kicker": "一夜吃掉多少虫", "line": "农业上它们值多少钱：一只蝙蝠一夜吃下的昆虫能达到自身体重的量级。" },
+        { "day": 5, "kicker": "带病毒却不生病", "line": "飞行代谢高、免疫耐受强。溢出发生在什么条件下，为什么不该怪宿主。" }
+      ],
+      "words": {
+        "verbs": ["echolocate", "hibernate", "emit", "forage", "pollinate"],
+        "nouns": ["echo", "frequency", "colony", "hibernation", "immunity"],
+        "adjs": ["nocturnal", "aerial", "tolerant", "communal"]
+      }
+    },
+    {
+      "id": "forest",
+      "title": "温带森林 · 树与菌网",
+      "kind": "自然",
+      "planned": "原定 W05（可提前）",
+      "oneLine": "树站着一动不动，但脚底下有一张交易网络，糖换磷，两边都在算账。",
+      "why": "把视角从动物换到植物和真菌。symbiosis 这个概念先在这里落地，到 W07 珊瑚礁会第二次出现，同一批词就能复习一遍。",
+      "angles": [
+        { "day": 1, "kicker": "地下的交易", "line": "菌根：树给糖，菌给磷和水。所谓 wood wide web 到底被证实了多少。" },
+        { "day": 2, "kicker": "遮荫与竞争", "line": "树冠分层，谁先长到光里谁赢；耐阴的树苗可以在暗处等几十年。" },
+        { "day": 3, "kicker": "落叶归土", "line": "凋落物怎么分解，土壤有机质怎么攒起来，一层土要几百年。" },
+        { "day": 4, "kicker": "火不是敌人", "line": "有些松树的球果要高温才打开。长期灭火，反而把燃料攒起来。" },
+        { "day": 5, "kicker": "碳账本", "line": "幼林长得快但存得少，老林存得多但长得慢。碳汇怎么算才算数。" }
+      ],
+      "words": {
+        "verbs": ["decompose", "colonize", "shade", "sprout", "sequester"],
+        "nouns": ["canopy", "litter", "sapling", "humus", "fungus"],
+        "adjs": ["deciduous", "tolerant", "mature", "fungal"]
+      }
+    }
+  ]
+}
