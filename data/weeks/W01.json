@@ -1,0 +1,50 @@
+{
+  "week": "W01",
+  "theme": "城市里的鸟",
+  "angle": "适应",
+  "quarter": "Q1 重建期",
+  "level": "Lexile 700–900",
+  "status": "reading",
+  "why": "具体的、有画面的名词最容易带来「我读懂了」的反馈。第一周的目标不是学多少词，是证明这件事你能接着做下去。",
+  "angles": [
+    {
+      "day": 1,
+      "kicker": "食物从哪来",
+      "line": "城市把鸟的菜单换了一遍：垃圾、投喂、观赏植物。四种觅食方式，四种活法。"
+    },
+    {
+      "day": 2,
+      "kicker": "为什么唱得更高",
+      "line": "低频噪音盖住了低音。不是鸟想唱高，是高音才有人听得见。"
+    },
+    {
+      "day": 3,
+      "kicker": "摩天楼当悬崖",
+      "line": "游隼没适应城市——它本来就长成了悬崖的形状。preadaptation 是这周最值钱的词。"
+    },
+    {
+      "day": 4,
+      "kicker": "城市热岛",
+      "line": "同一条街，隔几百米差五度。暖是资源，暖过头就是危险。"
+    },
+    {
+      "day": 5,
+      "kicker": "观鸟者变数据",
+      "line": "几千个业余爱好者，免费提供了研究预算买不到的覆盖。偏差也一起来了。"
+    },
+    {
+      "day": 6,
+      "kicker": "水下麦克风",
+      "line": "人数比的是谁更准，录音比的是谁能待得更久。尺度一换，结论就换。"
+    }
+  ],
+  "wordfield": {
+    "verbs": ["adapt", "thrive", "decline", "shift", "forage", "tolerate"],
+    "nouns": ["habitat", "territory", "predator", "population", "species", "ledge"],
+    "adjs": ["urban", "abundant", "tolerant", "native", "scarce"]
+  },
+  "closing": [
+    "回看这周圈过的词，挑 3 个「见过三次以上、但还是说不准」的单独过一遍。",
+    "不用重读全文。只回答一个问题：这六篇里，哪一篇你读完能跟别人讲清楚？"
+  ]
+}

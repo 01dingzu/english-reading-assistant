@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#FAF9F5">
+<link rel="icon" href="data:,">
+<title>周回顾 · 英语阅读</title>
+<link rel="stylesheet" href="../css/app.css">
+<style>
+  [hidden] { display: none !important; }
+
+  html { font-size: 16px; }
+  body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: var(--ui-font);
+    -webkit-text-size-adjust: 100%;
+  }
+  .w-wrap { max-width: 620px; margin: 0 auto; padding: 0 18px 70px; }
+
+  .w-top {
+    display: flex; align-items: center; gap: 12px;
+    padding: 14px 0 18px;
+  }
+  .w-back {
+    flex: none; width: 32px; height: 32px; border-radius: 50%;
+    display: grid; place-items: center; text-decoration: none;
+    font-size: 15px; color: var(--ink-2);
+    background: var(--surface); border: 0.5px solid var(--line);
+  }
+  .w-top .t { font-size: 15px; color: var(--ink-2); }
+
+  .w-hero { margin-bottom: 24px; }
+  .w-kicker {
+    font-size: 11.5px; letter-spacing: .12em; color: var(--accent);
+    font-weight: 500; margin-bottom: 6px;
+  }
+  .w-hero h1 {
+    font-family: var(--reader-font); font-size: 27px; font-weight: 500;
+    line-height: 1.3; margin: 0 0 8px;
+  }
+  .w-hero .w-sub {
+    font-size: 13px; color: var(--ink-3); margin: 0; line-height: 1.6;
+  }
+
+  .w-stats {
+    display: flex; gap: 8px; margin-bottom: 26px;
+  }
+  .w-stat {
+    flex: 1; padding: 12px 8px; border-radius: 11px; text-align: center;
+    background: var(--surface); border: 0.5px solid var(--line);
+  }
+  .w-stat b { display: block; font-size: 19px; font-weight: 500; line-height: 1.25; }
+  .w-stat span { font-size: 11px; color: var(--ink-3); }
+
+  .w-sec-title {
+    font-size: 12px; letter-spacing: .06em; color: var(--ink-3);
+    margin: 0 0 10px; font-weight: 500;
+  }
+
+  /* 文章行 */
+  .r-item {
+    display: flex; gap: 12px; align-items: baseline;
+    padding: 13px 14px; border-radius: 11px; text-decoration: none;
+    background: var(--surface); border: 0.5px solid var(--line);
+    margin-bottom: 7px; color: var(--ink);
+  }
+  .r-item:active { background: var(--accent-soft); }
+  .r-item .n {
+    flex: none; font-size: 11px; color: var(--ink-3); width: 34px;
+    font-variant-numeric: tabular-nums;
+  }
+  .r-item .body { flex: 1; min-width: 0; }
+  .r-item .ttl {
+    font-family: var(--reader-font); font-size: 15.5px; line-height: 1.35;
+    display: block; margin-bottom: 3px;
+  }
+  .r-item .k { font-size: 12px; color: var(--ink-3); }
+  .r-item .meta {
+    flex: none; text-align: right; font-size: 11px; color: var(--ink-3);
+    line-height: 1.5; font-variant-numeric: tabular-nums;
+  }
+  .r-item .meta b { display: block; color: var(--ink-2); font-weight: 500; font-size: 12.5px; }
+
+  .w-block { margin-top: 28px; }
+  .w-note { font-size: 12.5px; color: var(--ink-3); line-height: 1.7; margin: -4px 0 12px; }
+
+  .r-field { margin-bottom: 12px; }
+  .r-field .lbl { font-size: 11px; color: var(--ink-3); margin-bottom: 6px; }
+  .r-chips { display: flex; flex-wrap: wrap; gap: 6px; }
+  .r-chip {
+    font-family: var(--reader-font); font-size: 13px;
+    padding: 4px 10px; border-radius: 7px;
+    background: #F1EFE7; color: var(--ink-2);
+  }
+  .r-chip.have { background: var(--accent-soft); color: var(--accent); }
+
+  .r-close-list { margin: 0; padding-left: 18px; }
+  .r-close-list li {
+    font-size: 14px; line-height: 1.75; color: var(--ink-2); margin-bottom: 8px;
+  }
+
+  .w-next {
+    display: block; margin-top: 30px; padding: 16px 18px;
+    border-radius: 12px; text-decoration: none; color: var(--ink);
+    background: var(--surface); border: 0.5px solid var(--line);
+  }
+  .w-next .k { font-size: 11px; color: var(--ink-3); letter-spacing: .06em; }
+  .w-next b {
+    display: block; font-family: var(--reader-font); font-size: 18px;
+    font-weight: 500; margin: 6px 0 8px;
+  }
+  .w-next .a { font-size: 12.5px; color: var(--accent); }
+
+  /* 候选主题卡 */
+  .p-opt {
+    padding: 16px 16px 14px; border-radius: 12px; margin-bottom: 10px;
+    background: var(--surface); border: 1px solid var(--line);
+    cursor: pointer; transition: border-color .15s, background .15s;
+  }
+  .p-opt.on { border-color: var(--accent); background: #FCFBF6; }
+  .p-opt .hd { display: flex; align-items: baseline; gap: 8px; margin-bottom: 6px; }
+  .p-opt .ttl {
+    font-family: var(--reader-font); font-size: 19px; font-weight: 500; flex: 1;
+  }
+  .p-opt .pick {
+    font-size: 10.5px; padding: 2px 7px; border-radius: 20px;
+    background: #F1EFE7; color: var(--ink-3);
+  }
+  .p-opt.on .pick { background: var(--accent); color: #fff; }
+  .p-opt .line {
+    font-size: 13.5px; line-height: 1.65; color: var(--ink-2); margin: 0 0 8px;
+    font-family: var(--reader-font);
+  }
+  .p-opt .tags { display: flex; gap: 8px; font-size: 11px; color: var(--ink-3); }
+  .p-opt .tags em { font-style: normal; color: var(--warn); }
+
+  .p-angle { display: flex; gap: 10px; padding: 9px 0; border-top: 0.5px solid var(--line); }
+  .p-angle:first-child { border-top: none; }
+  .p-angle .d {
+    flex: none; width: 26px; font-size: 11px; color: var(--ink-3); padding-top: 2px;
+  }
+  .p-angle .c { flex: 1; }
+  .p-angle .k { font-size: 13px; font-weight: 500; display: block; margin-bottom: 2px; }
+  .p-angle .l { font-size: 12.5px; color: var(--ink-3); line-height: 1.6; }
+
+  .w-btn {
+    width: 100%; padding: 14px; border-radius: 11px; border: none;
+    font-family: var(--ui-font); font-size: 15px; cursor: pointer;
+    background: var(--accent); color: #fff; margin-top: 18px;
+  }
+  .w-btn:disabled { opacity: .55; }
+  .w-hint { font-size: 12px; color: var(--ink-3); line-height: 1.7; margin-top: 12px; text-align: center; }
+  .w-err { color: var(--danger); font-size: 13.5px; line-height: 1.7; }
+</style>
+</head>
+<body>
+<div class="w-wrap">
+  <div class="w-top">
+    <a class="w-back" href="../#/shelf" aria-label="返回">←</a>
+    <span class="t" id="w-crumb">周回顾</span>
+  </div>
+
+  <div id="w-loading" class="w-hint" style="text-align:left">正在读取…</div>
+  <div id="w-error" class="w-err" hidden></div>
+
+  <!-- ========== 周回顾 ========== -->
+  <div id="w-review" hidden>
+    <div class="w-hero">
+      <div class="w-kicker" id="r-kicker"></div>
+      <h1 id="r-theme"></h1>
+      <p class="w-sub" id="r-sub"></p>
+    </div>
+    <div class="w-stats" id="r-stats"></div>
+    <p class="w-sec-title">这一周读了什么</p>
+    <div id="r-list"></div>
+    <div class="w-block">
+      <p class="w-sec-title">本周词汇场</p>
+      <p class="w-note">这些词应该自己找上门了。浅色是还没进生词本的。</p>
+      <div id="r-words"></div>
+    </div>
+    <div class="w-block" id="r-close-block">
+      <p class="w-sec-title">收个尾</p>
+      <ol class="r-close-list" id="r-closing"></ol>
+    </div>
+    <a class="w-next" id="r-next" href="?week=2">
+      <span class="k">下周</span>
+      <b id="r-next-title">…</b>
+      <span class="a">看主题、换一个 →</span>
+    </a>
+  </div>
+
+  <!-- ========== 周开始 ========== -->
+  <div id="w-preview" hidden>
+    <div class="w-hero">
+      <div class="w-kicker" id="p-kicker"></div>
+      <h1>下周读什么</h1>
+      <p class="w-sub" id="p-intro"></p>
+    </div>
+    <p class="w-sec-title">三个候选，点一个换掉</p>
+    <div id="p-options"></div>
+    <div class="w-block" id="p-detail-block">
+      <p class="w-sec-title" id="p-detail-title">五天切口</p>
+      <div id="p-detail"></div>
+      <div id="p-words" style="margin-top:14px"></div>
+    </div>
+    <button class="w-btn" id="p-confirm">就按这个出文章</button>
+    <p class="w-hint" id="p-hint"></p>
+  </div>
+</div>
+<script type="module" src="./weekly.js"></script>
+</body>
+</html>

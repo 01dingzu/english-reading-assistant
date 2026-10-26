@@ -1,0 +1,68 @@
+{
+  "week": "W02",
+  "status": "next",
+  "defaultOption": "migration",
+  "intro": "下周一个主题、五个切口。三个候选都写好了，你说一声就按你选的出文章；不选就按原计划走。",
+  "options": [
+    {
+      "id": "migration",
+      "title": "迁徙 · 导航",
+      "kind": "自然",
+      "planned": "W02（原定）",
+      "oneLine": "一只鸟没有地图、没有地标，凭什么飞几千公里落在同一个海湾。",
+      "why": "从 W01 的「留在城市」转到「离开一座城」。同一个词族会以另一种方式复现：habitat 变成 stopover，territory 变成 route，adapt 变成 timing。",
+      "angles": [
+        { "day": 1, "kicker": "三套罗盘", "line": "地磁、太阳、星辰。它们怎么互相校准，阴天怎么办。" },
+        { "day": 2, "kicker": "十一天不落地", "line": "斑尾塍鹬飞一万两千公里，中间不吃不睡。代价是什么。" },
+        { "day": 3, "kicker": "V 字不是礼貌", "line": "前面那只在替后面挡风，位置会轮换。省的是真金白银的能量。" },
+        { "day": 4, "kicker": "加油站", "line": "滩涂和潮汐。出发前体重翻倍，脂肪就是燃料。" },
+        { "day": 5, "kicker": "时间错位", "line": "春天提前了，鸟到的时候虫子已经走了。phenological mismatch。" }
+      ],
+      "words": {
+        "verbs": ["migrate", "navigate", "orient", "refuel", "depart"],
+        "nouns": ["instinct", "bearing", "flock", "formation", "stopover", "endurance"],
+        "adjs": ["magnetic", "seasonal", "exhausting", "instinctive"]
+      }
+    },
+    {
+      "id": "citynight",
+      "title": "城市的夜 · 光污染",
+      "kind": "自然 × 城市",
+      "planned": "改排（与 W01 直接衔接）",
+      "oneLine": "城市把夜晚照亮了，鸟的罗盘跟着失灵，人的生物钟也没躲过去。",
+      "why": "W01 读完城市里的鸟，这篇接着往下走一层：光也是城市改造环境的一种方式。词汇场大量复用，读起来最顺。",
+      "angles": [
+        { "day": 1, "kicker": "天空不再黑", "line": "skyglow：一座城的光能照亮几十公里外的云底。" },
+        { "day": 2, "kicker": "撞玻璃", "line": "灯把鸟吸进城，玻璃让它看不见。窗杀是最大的单一死因之一。" },
+        { "day": 3, "kicker": "人的生物钟", "line": "褪黑素被压下去之后，代谢和睡眠一起变差。" },
+        { "day": 4, "kicker": "暗夜保护区", "line": "有些地方开始立法关灯，怎么执行，谁在反对。" },
+        { "day": 5, "kicker": "关灯的性价比", "line": "照亮并不等于安全。数据和直觉在这里常常打架。" }
+      ],
+      "words": {
+        "verbs": ["illuminate", "dim", "disrupt", "attract", "shield"],
+        "nouns": ["glare", "skyglow", "corridor", "threshold", "circadian", "migration"],
+        "adjs": ["nocturnal", "artificial", "excessive", "drowsy"]
+      }
+    },
+    {
+      "id": "coral",
+      "title": "珊瑚礁 · 共生与白化",
+      "kind": "自然",
+      "planned": "原定 W07（可提前）",
+      "oneLine": "珊瑚不是石头，是一群动物养着一群藻。水温升两度，这段关系就断了。",
+      "why": "把视角从陆地换到海里。symbiosis 这个词会在这周反复出现，是生物类文章的高频核心。",
+      "angles": [
+        { "day": 1, "kicker": "动物，不是石头", "line": "珊瑚虫和虫黄藻：一个给房子，一个给饭。" },
+        { "day": 2, "kicker": "白化", "line": "不是死了，是把室友赶走了。赶走之后还能不能请回来。" },
+        { "day": 3, "kicker": "海水变酸", "line": "pH 掉 0.1，钙化就变难。造礁的速度追不上融化的速度。" },
+        { "day": 4, "kicker": "礁的声音", "line": "健康的礁很吵。鱼靠声音找家，修复区可以放喇叭。" },
+        { "day": 5, "kicker": "种珊瑚", "line": "人工养殖能救回来多少？规模和成本的现实账。" }
+      ],
+      "words": {
+        "verbs": ["bleach", "calcify", "colonize", "restore", "thrive"],
+        "nouns": ["symbiosis", "algae", "colony", "reef", "acidity", "habitat"],
+        "adjs": ["tropical", "fragile", "resilient", "acidic"]
+      }
+    }
+  ]
+}

@@ -1,0 +1,8 @@
+{
+  "current": "W01",
+  "next": "W02",
+  "weeks": [
+    { "week": "W01", "file": "W01.json", "status": "reading" },
+    { "week": "W02", "file": "W02.json", "status": "next" }
+  ]
+}
