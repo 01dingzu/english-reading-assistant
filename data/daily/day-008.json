@@ -1,0 +1,30 @@
+{
+  "day": 8,
+  "date": "2026-10-27",
+  "week": "W02",
+  "theme": "迁徙·导航",
+  "title": "Eleven Days Without Landing",
+  "words": 508,
+  "density": 5.1,
+  "minutes": 8,
+  "before": [
+    "一只鸟飞一万二千公里、十一天不吃不睡不落地。你觉得它中途不停，是因为它做得到，还是因为它停不下来？读完再判断。"
+  ],
+  "paras": [
+    "Eleven Days Without Landing",
+    "In September, a bird the size of a pigeon lifts off a mudflat in western Alaska. It does not circle to gain height. It climbs, turns south, and keeps going. Below it, for the next nine days, there is nothing to stand on but water.",
+    "The bird is a bar-tailed godwit. In 2020 a team fitted one with a small satellite tag and tracked it across the Pacific. It flew some twelve thousand kilometers and came down in New Zealand eleven days later. It had not eaten. It had not slept at all. It had not touched land once.",
+    "Most birds make the same journey in stages. They drop onto a mudflat, feed for a week, rebuild their fat, and move on. A godwit cannot do that, and the reason is simple: it is not a seabird. Water goes through its feathers, so a godwit that comes down on the open ocean does not rest. It drowns. The route is not chosen for speed. It is one unbroken line, because every point on it is a place where the bird would die.",
+    "To fly that line, the bird rebuilds itself before it leaves. In the weeks on the Alaskan flats it eats almost without pause, and its weight nearly doubles. Most of the new mass is fat. At the start, more than half the bird is fuel — the lightest way to store energy there is.",
+    "But weight is the enemy, and fat is not the only thing the bird has to account for. In the last days before departure, its digestive system begins to close down. The gut and the liver shrink. The organs that would process food are put away, because an organ that does not work is dead weight over an ocean.",
+    "This sounds like damage. It is closer to a loan. When it lands in New Zealand it weighs only about half of what it did in Alaska. Within a few days of feeding, the gut and the liver grow back to full size. The body that arrives is not the body that left.",
+    "The departure is not the bird's to choose. Godwits wait on the flats until the weather turns — until a low system swings the wind around and sends it south. Leave a day early and the tailwind becomes a headwind, and the fuel runs out over water. The window is narrow, and a missed window is another year on the same coast.",
+    "That last part is what I keep coming back to. The godwit's nonstop flight is usually told as a story about endurance, and it is one. But endurance is also what you need once every place to stop has been taken away. The mudflats these birds refuel on in other seasons — above all the Yellow Sea — have been filled in and built over for decades. A bird that cannot land at sea has fewer alternatives every year. Eleven days without landing looks like an achievement. It may be what is left when the other options are gone."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "机关在三处：第 3 段把「不停」归到身体上——不是海鸟、羽毛不防水，落水即死，所以路线是被身体决定的，不是被意志决定的；第 5-6 段是重量经济学，把内脏折起来当行李寄存，落地再长回来（loan 那个比喻是全文最省力的一句）；最后一段把「耐力神话」翻过来——不停不是本事，是选项被拿掉之后剩下的那个。支点句在末句：It may be what is left when the other options are gone."
+}
