@@ -1,0 +1,30 @@
+{
+  "day": 9,
+  "date": "2026-10-28",
+  "week": "W02",
+  "theme": "迁徙·导航",
+  "title": "The V Formation Is Not a Courtesy",
+  "words": 534,
+  "density": 5.6,
+  "minutes": 8,
+  "before": [
+    "V 字队形里，领飞的那只最累、最不占便宜——那为什么还有鸟愿意排在最前面？读完再回答。"
+  ],
+  "paras": [
+    "The V Formation Is Not a Courtesy",
+    "The godwit from yesterday crossed an ocean alone, because it had no choice. Most birds that cross continents travel the other way: they leave in groups, and the group does not spread across the sky like a cloud. It flies in a V.",
+    "For a long time the V was explained with feelings. The birds take turns leading, people said, out of kindness; the weak hide behind the strong. The formation looked like teamwork, so teamwork was named as the reason. Then, in 2014, a research team fitted GPS loggers onto a flock of northern bald ibises and followed them on migration. The loggers recorded where every bird was, second by second.",
+    "The data said the shape is physics. A wing holds a bird up because it presses the air down, and that air does not disappear. It rolls away from the end of each wing as a vortex. Directly behind the wing, this air is falling. Off to the side, at the height of the wingtip, the same roll of air is rising.",
+    "The ibises found this without any physics. Each bird flew not behind the bird in front but beside it, just off the wingtip — in the band of rising air, close enough to borrow it and far enough not to crash into it. And the record showed something stranger: the birds matched the timing of their flaps to the bird ahead, so that each beat arrived in the lift at the right moment. Nobody learns that on the ground.",
+    "The penalty for the shape falls on one bird. The leader sits ahead of the V, in open air, using no one's lift, paying the full drag of its own flight. A study of pelicans found that birds flying in formation had slower heart rates than birds flying alone — the ones in back beat their wings less and glided more, saving about a fifth of the energy. Nobody measured the leader's savings, because there were none.",
+    "Which raises the question of the front seat. If the leader pays and everyone else saves, the smart flock would be a line of birds behind one tired volunteer. Real flocks do something else: they work like a relay. When the leader tires, it drops back into one of the saving positions, and another bird moves up into the clean air. Cyclists in a team time trial ride exactly this way, trading the front every few minutes, because the front seat is a job, not a prize.",
+    "So the V is not a courtesy, and it is not exactly friendship either. It is what a moving wing makes available, plus an arrangement for sharing the one expensive position. The formation is free. The front is not. The relay is the deal that makes the shape fair.",
+    "A godwit flies alone over the Pacific because stopping was taken away from it. Birds that could stop still fly together, and they line up in a V for a plainer reason: the cheapest fuel in the sky is the lift coming off somebody else's wingtip. From the ground, the V looks like order. From the height of a wingtip, it looks like bookkeeping."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "机关在三处：第 3 段把 V 形从「团结」翻译成物理——翼尖涡流，正后方气流下沉、侧后方上扬，位置本身就是答案；第 5 段是代价段——领飞者不借任何人的升力、全额支付自己的 drag，鹈鹕研究里后排队列心率更低；第 6 段回答读前问题——轮换不是美德，是把「最贵的位置」摊到每只鸟头上的机制，与自行车计时赛同构。支点句在末段：The cheapest fuel in the sky is the lift coming off somebody else's wingtip. 与 008 的收尾（「不停是选项被拿掉之后剩下的」）同构：008 讲不得不独自飞，本篇讲能停下仍结伴飞的理由。"
+}
