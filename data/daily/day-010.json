@@ -1,0 +1,32 @@
+{
+  "day": 10,
+  "date": "2026-10-29",
+  "week": "W02",
+  "theme": "迁徙·导航",
+  "title": "A Bird That Doubles Its Weight",
+  "words": 549,
+  "density": 5.3,
+  "minutes": 8,
+  "before": [
+    "多带油会让飞行更费油——那为什么鸟还要在出发前把体重翻一倍？读完给一个不是「为了迁徙」的回答。"
+  ],
+  "paras": [
+    "A red knot lands on a mudflat in Delaware Bay in the second week of May. It weighs about ninety grams. If it is lucky, it will leave three weeks later weighing twice that.",
+    "Almost all of the new weight is fat.",
+    "For a bird, this is not a problem to be solved. It is the plan. Fat is the best fuel a body can carry, and a migrating bird is a machine that has to carry its own fuel. The question is not whether to carry it, but how much. It deposits fat the way a walker fills bottles at a spring: not for the whole trip, only for the next stage.",
+    "The tide sets the schedule. A mudflat is food for only a few hours on each side of low tide. When the water pulls back, the small animals in it can be reached. When the water returns, the table is cleared. Most birds live where food is always somewhere. Here, food arrives on a clock.",
+    "So this flat is a stopover, not a home. It is also tidal: it opens twice a day and closes on a schedule. The bird is not here to rest, it is here to refuel, and refueling has a deadline. One that arrives late eats for an hour and leaves lighter than it should.",
+    "And the food has to be there. In Delaware Bay the timing is exact: horseshoe crabs come out of the water to lay eggs in the same weeks the birds arrive, and those eggs lie in the sand in thick patches. The birds are not eating the crab. They are eating what the crab leaves behind.",
+    "Now the awkward part. Fat is heavy. A bird that loads too much carries extra weight, and weight costs fuel. Load too little and it runs out over open water, where there is nothing to land on. There is a narrow margin in between, and the bird has to find it without knowing the weather on the far side. A reserve of fat is a bet on the weather, and it is made twice a year.",
+    "A migration is not one flight. It is a chain of fuel stops, and every stop has to be found full. The bird does not fail at the end of the journey. It fails over the water, at the moment the flat it was counting on turns out to be a wall, a road, or a beach with no crab left.",
+    "By the time it lands, the reserve is gone. It is not tired in the way we mean, it is out of fuel, and a bird with depleted reserves cannot leave until the next tide.",
+    "Some birds answer this by not stopping at all. A godwit crossing the Pacific carries everything from the start, and its stomach gets smaller to save weight. That works only if the tank it leaves with is enough to finish.",
+    "The knot makes the other bet: it trusts the map. It trusts that the flats will still be there, twice a day, with the tide on schedule and the eggs in the sand. Most years it is right. The whole system is a promise made again every spring, and none of it is written anywhere the bird can read."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "机关在三处：第 3 段把「长胖」翻译成工程问题——脂肪是单位重量最划算的燃料，问题不是带不带，是带多少；第 4、5 段把滩涂从「地方」改成「窗口」——潮水每天开合两次，所以这是一份有截止时间的加油工作；第 7 段是代价段——油自身要耗油运，装太少掉海里、装太多白烧，中间只剩一条窄的 margin，而鸟不知道对岸的天气，所以那不是精确值，是下注。支点句在第 9 段：A migration is not one flight. It is a chain of fuel stops. 与 008（中途站没了就只剩「不停」）、009（能停下仍结伴因为省油）接成一条线：008 讲停不下来，009 讲怎么省油，本篇讲油从哪来——所以失败点不在终点，在被指望的那片滩涂消失的那一刻。"
+}
