@@ -1,0 +1,31 @@
+{
+  "day": 11,
+  "date": "2026-10-30",
+  "week": "W02",
+  "theme": "迁徙·导航",
+  "title": "Spring Came Early. The Birds Did Not.",
+  "words": 549,
+  "density": 5.5,
+  "minutes": 8,
+  "before": [
+    "树有一本日历，鸟有一本日历，两本分别由谁翻页？读完给一个不是「春天变暖了」的回答。"
+  ],
+  "paras": [
+    "Spring Came Early. The Birds Did Not.",
+    "In a forest, spring is a race, and nobody announces the starting time. The oaks open their buds. Caterpillars hatch and begin to eat. For two or three weeks there is more caterpillar meat in the trees than at any other time. Then the peak passes, and the feast is over.",
+    "Small birds build their whole family around this peak. A warbler arrives from the south, lays her eggs so that her chicks hatch in the exact week when caterpillars are everywhere. A chick that hatches one week late grows more slowly. Two weeks late, and it may not grow at all.",
+    "So the whole system depends on two clocks staying synchronized. The trees and the insects share one clock: temperature. A warm spring opens the buds earlier, the caterpillars follow the leaves, and their peak moves earlier with them. That clock is flexible. It reads this year's weather, not the average of the past.",
+    "The birds carry a different clock: day length. From her wintering grounds hundreds of kilometers south, a warbler cannot feel the spring in Europe. What she can feel is the sun coming back. Her body holds a calendar written in daylight: when the days reach a certain length, go. For thousands of years this calendar worked, because day length never changed and the two clocks moved together.",
+    "Now they are moving apart. Winters have grown shorter, and spring has advanced — in many places by several days every ten years. The temperature clock runs ahead. Buds open earlier, caterpillars peak earlier, and the birds, trusting their daylight calendar, arrive exactly on time. It is just that \"on time\" now belongs to a spring that no longer exists.",
+    "The result is a mismatch. The warbler lands in a forest where the peak is already over. She lays her eggs on schedule, and her chicks hatch into famine. Nothing in the forest looks wrong. The trees are green, the insects are there. The food simply happened without her.",
+    "Scientists followed this for decades in the Netherlands, in one long study of great tits. In woods where leaf-out had moved fastest, the birds could not catch up, and their numbers declined. In other woods, where the shift was smaller, populations held on. The difference was not effort and not luck. It was whether the cue the birds relied on still tracked temperature.",
+    "It is tempting to call this a failure of the birds, but look again at the design. The calendar they use was reliable for millions of years. A signal that works almost always is more dangerous than a signal that sometimes fails, because you never test it. The birds are not stubborn. They are correct about a world that has stopped being the one they measured.",
+    "A bird cannot know that its calendar is out of date. It reads the sky, and the sky is honest; it is the ground that has moved. Earlier this week we said: instinct installs the compass. This piece adds the harder half: instinct also installs the calendar, and the calendar is not updated from the ground. The birds that survive will not be the strongest ones. They will be the ones whose clock happens, this generation, to be wrong in the right direction."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "机关在三处：第 3 段把树的钟立起来——温度钟读的是今年的天气，弹性；第 4 段把鸟的钟立起来——日长钟写死在身体里，从南方感受不到欧洲的春天；第 5 段两钟分开，「准时」属于一个已经不存在的春天。第 7 段是证据段：荷兰大山雀长线研究，错位拉得越快的林子数量掉得越狠，差别不在努力在线索。第 8 段是翻面：几乎永远灵的线索比偶尔失灵的更危险，因为从没被检验过。支点句在第 9 段：instinct also installs the calendar, and the calendar is not updated from the ground——与 007 的罗盘、010 的下注接成一条线：罗盘没坏，日历没坏，是地面先动了。"
+}
