@@ -56,6 +56,7 @@ function fail(html) {
   $id('d-end').hidden = true;
   $id('d-dock').style.display = 'none';
   $id('d-timer').hidden = true;
+  $id('d-write').hidden = true;
 }
 
 // ---------- 启动 ----------
@@ -93,6 +94,7 @@ async function boot() {
   updateDock();
   startClock();
   await initTimer();
+  await initWrite();
 }
 
 async function loadDictSafe() {
@@ -547,6 +549,74 @@ async function initTimer() {
   });
 }
 
+// ---------- 写摘要（Q1 写作线：读后三句） ----------
+// 她选的方案：摘要线 + 做进 App。存 kv `write.<篇号>`，和 read.timer. 同一模式，
+// 我读库时过滤前缀就能拿到原文批改。写不写完全自愿——这里只是把纸和笔放在手边。
+const WRITE_KEY = 'write.';   // + 篇号
+let writeSaved = null;        // 这一篇已保存的记录
+
+function writeWordCount(text) {
+  return (text || '').trim().split(/\s+/).filter((w) => /[A-Za-z]/.test(w)).length;
+}
+
+function renderWriteMeta() {
+  const cnt = $id('d-write-count');
+  const saved = $id('d-write-saved');
+  const open = $id('d-write-open');
+  cnt.textContent = `${writeWordCount($id('d-write-text').value)} 词`;
+  if (writeSaved) {
+    const d = new Date(writeSaved.at);
+    const hm = `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    const rev = writeSaved.history?.length ? ` · 改过 ${writeSaved.history.length} 版` : '';
+    saved.textContent = `已存 ${hm} · ${writeSaved.words} 词${rev}`;
+    open.textContent = `写摘要 · 已写 ${writeSaved.words} 词，点开修改`;
+  } else {
+    saved.textContent = '';
+    open.textContent = '写摘要 · 用三句英文说说这篇说了什么';
+  }
+}
+
+async function saveWrite() {
+  const ta = $id('d-write-text');
+  const text = ta.value.trim();
+  if (!text) { toast('还没写内容'); return; }
+  const n = writeWordCount(text);
+  const now = Date.now();
+  // 改过再存：旧版推进 history，二稿修订（Q4 的训练形态）从现在就有据可查
+  const rec = writeSaved && writeSaved.text !== text
+    ? {
+        day: DAY, text, words: n, at: now,
+        history: [...(writeSaved.history || []),
+          { text: writeSaved.text, words: writeSaved.words, at: writeSaved.at }],
+      }
+    : { day: DAY, text, words: n, at: now, history: writeSaved?.history || [] };
+  try {
+    await kv.set(WRITE_KEY + DAY, rec);
+    writeSaved = rec;
+    renderWriteMeta();
+    toast('已保存，想让我批改就说一声');
+  } catch (e) {
+    toast('保存失败：' + (e.message || e));
+  }
+}
+
+async function copyWrite() {
+  const text = $id('d-write-text').value.trim();
+  if (!text) { toast('还没写内容'); return; }
+  try {
+    await navigator.clipboard.writeText(text);
+    toast('已复制，粘到对话里我就批改');
+  } catch (e) {
+    toast('复制失败，直接把文字发我也行');
+  }
+}
+
+async function initWrite() {
+  try { writeSaved = (await kv.get(WRITE_KEY + DAY)) || null; } catch (e) { writeSaved = null; }
+  if (writeSaved) $id('d-write-text').value = writeSaved.text;
+  renderWriteMeta();
+}
+
 // ---------- 字号 / 提示 ----------
 async function readFont() {
   try {
@@ -583,6 +653,17 @@ function bindUI() {
   $id('d-fm').onclick = () => setFont(-2);
   $id('d-open-list').onclick = () => showList();
   $id('d-timer-btn').onclick = onTimerBtn;
+  $id('d-write-open').onclick = () => {
+    const panel = $id('d-write-panel');
+    const willOpen = panel.hidden;
+    panel.hidden = !willOpen;
+    if (willOpen) $id('d-write-text').focus();
+  };
+  $id('d-write-save').onclick = saveWrite;
+  $id('d-write-copy').onclick = copyWrite;
+  $id('d-write-text').addEventListener('input', () => {
+    $id('d-write-count').textContent = `${writeWordCount($id('d-write-text').value)} 词`;
+  });
   $id('d-sheet-x').onclick = () => closeSheet();
   $id('d-sheet').addEventListener('click', (e) => {
     if (e.target.id === 'd-sheet') closeSheet();

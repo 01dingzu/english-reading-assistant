@@ -235,6 +235,38 @@
   #d-timer-done { flex: 1 1 100%; font-size: 13.5px; color: var(--ink); line-height: 1.7; }
   #d-timer-done b { font-size: 16px; color: var(--accent); }
 
+  /* ---------- 写摘要（读后三句，写不写完全自愿） ---------- */
+  #d-write { margin: 0 0 22px; }
+  #d-write-open {
+    display: block; width: 100%; box-sizing: border-box; text-align: left; cursor: pointer;
+    font-family: var(--ui-font); font-size: 13.5px; color: var(--ink-2);
+    padding: 11px 14px; border-radius: var(--radius);
+    border: 0.5px dashed var(--line); background: transparent;
+  }
+  #d-write-open:active { color: var(--accent); border-color: var(--accent); }
+  #d-write-panel {
+    padding: 12px 14px; border-radius: var(--radius);
+    border: 0.5px solid var(--line); background: var(--surface);
+  }
+  #d-write-text {
+    display: block; width: 100%; box-sizing: border-box; resize: vertical;
+    font-family: var(--reader-font); font-size: 15px; line-height: 1.7;
+    color: var(--ink); padding: 10px 12px; border-radius: 8px;
+    border: 0.5px solid var(--line); background: var(--bg); outline: none;
+  }
+  #d-write-text:focus { border-color: var(--accent); }
+  #d-write-meta {
+    display: flex; gap: 10px; align-items: baseline;
+    font-size: 12px; color: var(--ink-3); margin-top: 8px;
+  }
+  #d-write-tools { display: flex; gap: 8px; margin-top: 10px; }
+  #d-write-tools button {
+    flex: 1; font-family: var(--ui-font); font-size: 13.5px;
+    padding: 9px 12px; border-radius: 9px; cursor: pointer;
+    border: 0.5px solid var(--line); background: var(--surface); color: var(--ink);
+  }
+  #d-write-save { background: var(--accent); border-color: var(--accent); color: #fff; font-weight: 500; }
+
   #d-toast {
     position: fixed; left: 50%; bottom: 84px; transform: translateX(-50%);
     z-index: 50; max-width: 84vw;
@@ -287,6 +319,20 @@
   <article id="d-article"></article>
   <p id="d-note" hidden></p>
   <section id="d-after" class="d-box" hidden style="margin-top:26px"></section>
+
+  <section id="d-write">
+    <button id="d-write-open" type="button">写摘要 · 用三句英文说说这篇说了什么</button>
+    <div id="d-write-panel" hidden>
+      <textarea id="d-write-text" rows="5" spellcheck="false"
+        placeholder="先一句话说这篇文章讲什么（what + why），再补一句你觉得有意思的细节。写错没关系，写完就行。"></textarea>
+      <div id="d-write-meta"><span id="d-write-count">0 词</span><span id="d-write-saved"></span></div>
+      <div id="d-write-tools">
+        <button id="d-write-save" type="button">保存</button>
+        <button id="d-write-copy" type="button">复制给我批改</button>
+      </div>
+    </div>
+  </section>
+
   <div id="d-end">— 完 —</div>
 </main>
 

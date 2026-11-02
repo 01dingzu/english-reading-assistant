@@ -246,6 +246,51 @@ const afterReload = await page.evaluate(() => ({
 t('刷新后仍显示上次成绩', /wpm/.test(afterReload.hint) && afterReload.btn === '重测',
   `${afterReload.btn} / ${afterReload.hint}`);
 
+// ---- 8.5 写摘要（Q1 写作线：读后三句）----
+const writeInit = await page.evaluate(() => ({
+  exists: !!document.querySelector('#d-write'),
+  panelHidden: document.querySelector('#d-write-panel')?.hidden !== false,
+  openLabel: document.querySelector('#d-write-open')?.textContent || '',
+}));
+t('写摘要区块渲染且默认收起', writeInit.exists && writeInit.panelHidden, writeInit.openLabel);
+
+await page.evaluate(() => document.querySelector('#d-write-open').click());
+await sleep(200);
+t('点开后出现输入框', await page.evaluate(() =>
+  document.querySelector('#d-write-panel')?.hidden === false));
+
+await page.evaluate(() => {
+  const ta = document.querySelector('#d-write-text');
+  ta.value = 'City birds change their food when humans feed them. Bread is easy to find but poor in protein. The study shows that pigeons now prefer meat in some parks.';
+  ta.dispatchEvent(new Event('input', { bubbles: true }));
+});
+await sleep(150);
+const cntText = await page.evaluate(() => document.querySelector('#d-write-count')?.textContent || '');
+t('词数统计只算英文词（29 词）', /29 词/.test(cntText), cntText);
+
+await page.evaluate(() => document.querySelector('#d-write-save').click());
+await sleep(400);
+const savedWrite = await page.evaluate(async () => {
+  const mod = await import(new URL('../js/db.js', location.href).href);
+  const all = await mod.kv.all();
+  return all.filter((r) => String(r.key).startsWith('write.')).map((r) => r.value);
+});
+t('摘要写进 kv（我这边能读）',
+  savedWrite.length >= 1 && savedWrite[0].words > 0 && /pigeons/.test(savedWrite[0].text),
+  JSON.stringify(savedWrite[0] || null).slice(0, 80));
+
+await page.reload({ waitUntil: 'networkidle2' });
+await page.waitForSelector('#d-article .tok', { timeout: 30000 });
+await sleep(700);
+const writeBack = await page.evaluate(() => ({
+  ta: document.querySelector('#d-write-text')?.value || '',
+  label: document.querySelector('#d-write-open')?.textContent || '',
+  meta: document.querySelector('#d-write-saved')?.textContent || '',
+}));
+t('刷新后回显已保存摘要', /pigeons/.test(writeBack.ta) && /已写/.test(writeBack.label),
+  `${writeBack.label} / ${writeBack.meta}`);
+await page.screenshot({ path: path.join(SHOT_DIR, 'daily-6-write.png') });
+
 // ---- 9. 首页联动：App 里能看到这批词 ----
 await page.goto(new URL('../', URL_DAILY).href, { waitUntil: 'networkidle2' });
 await page.waitForSelector('#dict-status', { timeout: 30000 });
