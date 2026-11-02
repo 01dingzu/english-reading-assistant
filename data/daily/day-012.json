@@ -1,0 +1,32 @@
+{
+  "day": 12,
+  "date": "2026-11-02",
+  "week": "W03",
+  "theme": "大型哺乳动物·象与鲸",
+  "title": "Why Nothing Bigger Than an Elephant Walks on Land",
+  "words": 559,
+  "density": 5.2,
+  "minutes": 7,
+  "before": [
+    "一头象的重量是马的十几倍，腿却只粗那么一点。它凭什么没被自己压塌？读完给一个不是「骨头硬」的回答。"
+  ],
+  "paras": [
+    "Why Nothing Bigger Than an Elephant Walks on Land",
+    "The legs are the first thing you notice. An elephant's leg does not look like a horse's. Below the knee there is no muscle you can see, no thin ankle, no spring. It is a column, almost straight, and the animal stands the way a building stands on a post. Nothing in that shape suggests speed. Everything in it suggests weight.",
+    "Which raises a plain question. Evolution has had a hundred million years of the same material. Why did the largest land animal stop at about six tonnes, when a blue whale can reach a hundred and fifty?",
+    "The easy answer is that size costs nothing, that a large body is only a larger copy of a small one. It is not. Double an animal's height and keep its shape, and every area grows four times while every volume grows eight. Bone strength depends on cross-section, an area. The load those bones carry depends on volume. A doubled elephant carries eight times the weight on legs four times as strong.",
+    "That is why the biggest land animals stand on supports, not springs. Their joints come close to locking, their feet are wide and flat, and they cannot jump. An elephant cannot gallop either; it can walk, and it can walk fast.",
+    "The second cost runs the other way. An animal's metabolism gives off heat in proportion to the volume of the body, but heat leaves through skin, which grows with the surface. Eight times the bulk, four times the skin: a large animal is a furnace with a small window. So an elephant in the sun must dissipate what it makes. Its ears are thin sheets of blood vessel, waved like fans. It bathes, throws mud, and rests in shade at midday.",
+    "The third cost is food, and it is not only supply. Grinding plants takes teeth, and teeth wear down. An elephant has six sets of molars that move forward in the jaw and are used in turn. When the last set is gone it can no longer chew, and it dies, often with years of lifespan left. The rate at which it can break food down is a hard limit, not a soft one.",
+    "Most of it is wasted. More than half of what it eats passes through undigested. It grazes for sixteen hours and sleeps about four.",
+    "None of these costs is a wall by itself. A little more bone would be possible, a little more heat could be shed. But they are paid together. Somewhere around six tonnes the total bill crosses what a body can earn in a day, and that crossing is the ceiling. It has no author. It is a balance of margins.",
+    "Then there is an escape: change the medium. Water holds you up. In the sea a skeleton no longer carries the body, it only turns it, and the first cost disappears. The same physics that forbade a giant on land allows one three times heavier in water, and the limit moves from bone to something else: how much you can take in a single mouthful. A blue whale answers that by filtering clouds of krill.",
+    "So the elephant is not a failure of imagination. It is the largest shape that can still pay three bills at once on dry ground."
+  ],
+  "after": [
+    "一句话主旨：两句话以内。",
+    "圈 3 个词：最挡路的，或者看着眼熟但说不准的。点一下就是圈了。",
+    "三句复述：一句概括、一句细节、一句你的判断（同意不同意，为什么）。"
+  ],
+  "note": "机关在四处。第 3 段立第一笔账：面积随身高平方涨、体积随立方涨，骨头强度看面积、要扛的重量看体积，放大一倍就得多扛一倍的单量。第 5 段把账翻到散热：代谢按体积发热、皮肤按面积散，八倍体重只配四倍皮肤，所以象耳是散热片、正午要躲阴。第 6 段第三笔是牙齿：咀嚼速率是硬上限，六套臼齿用完就饿死，寿命还在。第 8 段把三笔合成 ceiling——不是哪条物理定律画的红线，是三种成本同时付得起的位置，没有作者。第 9 段换介质：浮力卸掉第一笔，鲸就能大三倍，上限从骨头挪到「一口能吃多少」。支点句在第 8 段：that crossing is the ceiling. It has no author. It is a balance of margins. 与 W02 的「V 形不是美德，是物理加分摊」是同一种写法：形状不是设计，是几笔账同时付得起的地方。"
+}
